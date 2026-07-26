@@ -1,23 +1,18 @@
-import { Hero } from '@/components/sections/hero';
-import { About } from '@/components/sections/about';
-import { Services } from '@/components/sections/services';
-import { Stats } from '@/components/sections/stats';
-import { JobsPreview } from '@/components/sections/jobs-preview';
-import { Team } from '@/components/sections/team';
-import { Testimonials } from '@/components/sections/testimonials';
-import { CTA } from '@/components/sections/cta';
+'use client';
 
-export default function HomePage() {
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function RootPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/pt/');
+  }, [router]);
+
   return (
-    <>
-      <Hero />
-      <About />
-      <Stats />
-      <Services />
-      <JobsPreview />
-      <Team />
-      <Testimonials />
-      <CTA />
-    </>
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-600 dark:bg-slate-950 dark:text-slate-400">
+      <p>Redirecionar...</p>
+    </div>
   );
 }

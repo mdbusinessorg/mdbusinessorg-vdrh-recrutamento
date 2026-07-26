@@ -1,0 +1,294 @@
+{
+  "metadata": {
+    "title": "VDRH — Visão e Desenvolvimento de Recursos Humanos",
+    "description": "Consultora de Recursos Humanos em Angola. Recrutamento, desenvolvimento de talentos, diversidade, inclusão e conformidade laboral."
+  },
+  "nav": {
+    "home": "Início",
+    "services": "Serviço",
+    "about": "Quem Somos",
+    "career": "Carreira",
+    "contact": "Contactos",
+    "requestService": "Pedir Serviço",
+    "schedule": "Agendamento",
+    "apply": "Candidatura"
+  },
+  "common": {
+    "learnMore": "Saber mais",
+    "send": "Enviar",
+    "sending": "A enviar...",
+    "success": "Sucesso",
+    "error": "Erro",
+    "close": "Fechar",
+    "openPositions": "Vagas abertas",
+    "applyNow": "Junte-se a nós",
+    "requestServiceBtn": "Solicitar Serviço",
+    "scheduleBtn": "Agendar Serviço",
+    "phone": "(+244) 923 789 748",
+    "email": "geral@vdrh.ao",
+    "address": "Multicenter, Camama, Luanda",
+    "scheduleTime": "Segunda-feira – Sexta-feira, 08:00–16:30",
+    "whatsappMessage": "👋 Bem Vindo! VDRH - Visão e Desenvolvimento de Recursos Humanos. Em que podemos ajudar? Entre em contacto",
+    "copyright": "© VDRH Todos direitos reservados – {year} By Fernando Quissanga",
+    "whatsappLink": "https://wa.link/1m7xru"
+  },
+  "home": {
+    "heroTitle": "VDRH — Visão e Desenvolvimento de Recursos Humanos",
+    "heroText": "O desenvolvimento do capital humano é uma constante engrenagem que não pode parar em uma corporação, se não houver manutenção, as consequências podem ser irreparáveis.",
+    "aboutTitle": "Quem Somos?",
+    "aboutIntro": "A VDRH – Visão e Desenvolvimento de Recursos Humanos é um projecto orientado para a sustentabilidade económica e social. Actuamos por meio de um conjunto de acções e actividades que visam melhorar a qualidade de vida, reduzir desigualdades, ampliar direitos e assegurar o acesso a serviços.",
+    "missionVisionTitle": "Missão e Visão",
+    "missionTitle": "Missão",
+    "missionText": "Prestar serviços de qualidade em gestão de pessoas, impulsionando desenvolvimento de capital humano e inspirando a superação pessoal com respeito às diferenças, responsabilidade, solidariedade, cooperação e princípio de integridade e amor ao próximo.",
+    "visionTitle": "Visão",
+    "visionText": "Ser uma organização de sustentabilidade económica e social que promove melhoria contínua da qualidade de vida, reduz desigualdade, amplia direitos e garante acesso a serviços, considerando gerações presentes e futuras.",
+    "objectivesTitle": "Objectivos",
+    "objectives": [
+      "Promover o sucesso humano, com atenção à inclusão e equidade de gênero;",
+      "Valorizar relações interpessoais e o trabalho de equipe;",
+      "Transmitir valores que sustentam conduta ética e cidadania;",
+      "Reforçar identidade e carácter, alinhados a propósito e responsabilidade."
+    ],
+    "valuesTitle": "Valores",
+    "values": [
+      { "title": "Empatia", "text": "Colocamo-nos no lugar de quem servimos, entendendo necessidades reais." },
+      { "title": "Resiliência", "text": "Superamos obstáculos com determinação e aprendizagem contínua." },
+      { "title": "Excelência e melhoria contínua", "text": "Perseguimos padrões elevados e impacto duradouro." },
+      { "title": "Solidariedade", "text": "Compromisso com o bem-estar das comunidades que atendemos." },
+      { "title": "Trabalho em equipa", "text": "Resultados maiores nascem da cooperação." },
+      { "title": "Integridade e ética", "text": "Actuação justa, honesta e transparente, honrando compromissos." },
+      { "title": "Rigor", "text": "Cumprimento de procedimentos e métodos, criando hábitos de trabalho eficazes e confiáveis." }
+    ],
+    "servicesTitle": "O que fazemos?",
+    "servicesIntro": "A VDRH é uma empresa de serviços que oferece soluções personalizadas para aumentar o valor do capital intangível dos seus parceiros. Atuamos na gestão e desenvolvimento do capital humano, cobrindo necessidades de Recursos Humanos ponta a ponta.",
+    "servicesCards": [
+      { "title": "Desenvolvimento de Talentos", "text": "Recrutamento, seleção, plano de carreira, matriz de competência, formação e mentoria de integração." },
+      { "title": "Diversidade, Inclusão e Equidade", "text": "Programas de desenvolvimento de mão de obra feminina e promoção da equidade de género." },
+      { "title": "Conformidade e Governança", "text": "Qualificador ocupacional, PDRH, balanço anual, gestão e avaliação de desempenho." }
+    ],
+    "statsTitle": "Progresso!",
+    "stats": [
+      { "label": "Serviços", "value": "12" },
+      { "label": "Consultoria", "value": "8" },
+      { "label": "Funcionários", "value": "15" },
+      { "label": "Parceiros", "value": "+", "suffix": "1" }
+    ],
+    "quote": "Trate sempre os seus funcionários exatamente como quer que eles tratem os seus melhores clientes.",
+    "quoteAuthor": "Dr. Verónica Mabanga",
+    "quoteRole": "Consultora",
+    "partnersTitle": "Nossos Parceiros",
+    "teamTitle": "Nossa Equipa",
+    "team": [
+      { "name": "Joana Manassas", "role": "Coord. Recursos Humanos" },
+      { "name": "Ana Africano", "role": "Assistente Jurídica" },
+      { "name": "Cristina Armísio", "role": "Assistente de Projecto" },
+      { "name": "Isabel Diogo", "role": "Assistente Administrativa" }
+    ]
+  },
+  "services": {
+    "title": "Serviços",
+    "intro": "Oferecemos soluções personalizadas para aumentar o valor do capital intangível dos nossos parceiros, cobrindo as necessidades de Recursos Humanos de ponta a ponta.",
+    "items": [
+      {
+        "title": "Desenvolvimento de Talentos",
+        "items": [
+          "Recrutamento e Seleção",
+          "Plano de Carreira (Progressão e Sucessão)",
+          "Matriz de Competência",
+          "Formação e Gestão de Talento",
+          "Plano de Treinamento/Formação",
+          "Mentoria de Integração — na Cultura Organizacional"
+        ]
+      },
+      {
+        "title": "Diversidade, Inclusão e Equidade",
+        "items": [
+          "Programa de Desenvolvimento de Mão de Obra Feminino",
+          "Promoção da Equidade de Gênero"
+        ]
+      },
+      {
+        "title": "Estrutura e Processo de Recursos Humanos",
+        "items": [
+          "Descritivos de Funções",
+          "Estrutura Salarial — por Função/Nível",
+          "Política, Processo e Procedimento Corporativos",
+          "Auditoria nos Processos de Recursos Humanos"
+        ]
+      },
+      {
+        "title": "Conformidade e Governança",
+        "items": [
+          "Qualificador Ocupacional",
+          "PDRH e Balanço Anual — nos padrões do Ministério de Tutela",
+          "Gestão e Avaliação de Desempenho e Progressão de Carreira"
+        ]
+      },
+      {
+        "title": "Administração Laboral e Obrigações",
+        "items": [
+          "Cedência de Pessoal — disponibilizar temporariamente trabalhadores, mantendo vínculo contratual original com a VDRH",
+          "Execução e Resolução de Contratos de Trabalho — segundo a legislação aplicável",
+          "Registo de Funcionários e Processamento no Portal da Segurança Social (INSS)",
+          "Registo e Submissão do RENT"
+        ]
+      }
+    ],
+    "ctaTitle": "Precisa de um serviço personalizado?",
+    "ctaText": "Entre em contacto connosco ou agende uma consultoria para discutir as necessidades da sua organização.",
+    "testimonialsTitle": "Testemunhos",
+    "testimonials": [
+      { "text": "Graças ao excelente trabalho desta empresa, conseguimos recrutar talentos alinhados com os nossos valores. O atendimento é rápido, transparente e muito eficiente. Estamos extremamente satisfeitos com os resultados.", "author": "Manuel Ngunza" },
+      { "text": "A equipa demonstrou grande profissionalismo desde o primeiro contacto. Ajudaram-nos a encontrar colaboradores qualificados em pouco tempo. Hoje temos uma equipa mais forte e motivada. Recomendamos os seus serviços sem hesitação.", "author": "Ana Quissanga" },
+      { "text": "O serviço de recrutamento superou as nossas expectativas. Recebemos candidatos bem preparados e com o perfil ideal para as nossas necessidades. Sem dúvida, um parceiro confiável para qualquer empresa.", "author": "João Samuel" },
+      { "text": "Excelente acompanhamento em todo o processo de seleção. A VDRH entendeu exactamente o perfil que precisávamos e entregou resultados de qualidade.", "author": "Ottoniela Bezerra" }
+    ]
+  },
+  "career": {
+    "title": "Carreira",
+    "subtitle": "Recrutamento",
+    "intro": "Junte-se à nossa equipa e faça parte de projectos que transformam organizações e desenvolvem pessoas.",
+    "jobs": [
+      {
+        "title": "Director Financeiro Adjunto",
+        "requirements": [
+          "BA em Finanças, Contabilidade ou Gestão;",
+          "Inscrito na ordem dos contabilistas (vantagem);",
+          "Mínimo 5 anos de experiência em funções similares;",
+          "Fluência em Inglês (obrigatório);",
+          "Experiência em SAP ERP e domínio de contabilidade (obrigatório);",
+          "Experiência em devolução de IVA e SAF-T."
+        ],
+        "responsibilities": "Garantir a precisão das demonstrações financeiras e relatórios mensais de fecho de contas; organizar, controlar e programar tarefas da equipa de contabilidade e financeira; controlar execução dos processos de controlo interno; reportar ao Director Financeiro; assegurar pagamentos e reconciliação de impostos (INSS, IRT, Impostos Industriais, etc.)."
+      },
+      {
+        "title": "Gestor Comercial",
+        "requirements": [
+          "Licenciatura em Administração de Empresas, Gestão, Contabilidade ou equivalente;",
+          "5+ anos de experiência;",
+          "Inglês fluente;",
+          "Domínio de Excel;",
+          "Conhecimentos de legislação comercial."
+        ],
+        "responsibilities": "Definir estratégia comercial, elaborar plano de negócios, definir políticas comerciais/marketing, gerir equipa, acompanhar indicadores comerciais e satisfação de clientes."
+      },
+      {
+        "title": "Coordenador Pedagógico",
+        "requirements": [
+          "Licenciatura em Pedagogia ou Psicologia;",
+          "5+ anos de experiência;",
+          "Nacionalidade angolana com bom domínio de português."
+        ],
+        "responsibilities": "Supervisionar política pedagógica, aconselhar sobre horários/pautas/provas, elaborar relatórios pedagógicos mensais."
+      },
+      {
+        "title": "Coordenador de Contabilidade",
+        "requirements": [
+          "Licenciatura em Contabilidade ou equivalente;",
+          "5+ anos de experiência;",
+          "Inglês fluente;",
+          "Comunicação e relatórios;",
+          "Conhecimento de mercados financeiros/fiscais."
+        ],
+        "responsibilities": "Planear e liderar o departamento de contabilidade; emissão de pagamentos, contas a pagar, reconciliações bancárias, fecho contabilístico."
+      },
+      {
+        "title": "Gestor de Projecto",
+        "requirements": [
+          "Licenciatura em Gestão, Administração, Psicologia, RH ou Direito;",
+          "5+ anos de experiência;",
+          "Nacionalidade angolana;",
+          "Bom português."
+        ],
+        "responsibilities": "Gerir política interna, aconselhar sobre estratégias internas/planos financeiros/gestão de pessoal e conflitos; relatórios internos mensais."
+      },
+      {
+        "title": "Supervisor de Andaimes",
+        "requirements": [
+          "Licenciatura em disciplinas técnicas ou afins;",
+          "Nacionalidade angolana ou estrangeira;",
+          "5+ anos de experiência;",
+          "Inglês preferencial."
+        ],
+        "responsibilities": "Supervisionar técnicas de montagem de andaimes em ambientes industriais e operações offshore; uso de equipamento para trabalho em altura; experiência offshore."
+      }
+    ]
+  },
+  "apply": {
+    "title": "Candidatura",
+    "subtitle": "Envie a sua candidatura",
+    "form": {
+      "name": "Nome completo",
+      "email": "E-mail",
+      "phone": "Telefone",
+      "position": "Vaga pretendida",
+      "cv": "Currículo (PDF)",
+      "coverLetter": "Carta de apresentação (opcional)",
+      "submit": "Submeter candidatura",
+      "success": "Candidatura enviada com sucesso. Entraremos em contacto em breve.",
+      "error": "Ocorreu um erro ao enviar. Tente novamente."
+    }
+  },
+  "requestService": {
+    "title": "Pedir Serviço",
+    "subtitle": "Solicitar Serviço",
+    "form": {
+      "name": "Nome",
+      "company": "Empresa",
+      "email": "E-mail",
+      "phone": "Telefone",
+      "serviceType": "Tipo de Serviço",
+      "serviceOptions": [
+        "Desenvolvimento de Talentos",
+        "Diversidade, Inclusão e Equidade",
+        "Estrutura e Processo de RH",
+        "Conformidade e Governança",
+        "Administração Laboral e Obrigações"
+      ],
+      "message": "Mensagem",
+      "submit": "Solicitar",
+      "success": "Pedido enviado com sucesso. A nossa equipa entrará em contacto em breve.",
+      "error": "Ocorreu um erro ao enviar. Tente novamente."
+    }
+  },
+  "schedule": {
+    "title": "Agendamento",
+    "subtitle": "Agendar Consultoria",
+    "form": {
+      "name": "Nome",
+      "company": "Empresa",
+      "email": "E-mail",
+      "phone": "Telefone",
+      "date": "Data pretendida",
+      "time": "Hora pretendida",
+      "consultancyType": "Tipo de consultoria",
+      "consultancyOptions": [
+        "Desenvolvimento de Talentos",
+        "Diversidade, Inclusão e Equidade",
+        "Estrutura e Processo de RH",
+        "Conformidade e Governança",
+        "Administração Laboral e Obrigações"
+      ],
+      "message": "Mensagem",
+      "submit": "Agendar",
+      "success": "Agendamento solicitado com sucesso. Confirmaremos em breve.",
+      "error": "Ocorreu um erro ao enviar. Tente novamente."
+    }
+  },
+  "contact": {
+    "title": "Contactos",
+    "form": {
+      "name": "Nome",
+      "email": "E-mail",
+      "phone": "Telefone",
+      "subject": "Assunto",
+      "message": "Mensagem",
+      "submit": "Enviar mensagem",
+      "success": "Mensagem enviada com sucesso.",
+      "error": "Ocorreu um erro ao enviar. Tente novamente."
+    },
+    "locationTitle": "Localização",
+    "scheduleTitle": "Dias e Horário",
+    "supportTitle": "Apoio ao Cliente"
+  }
+}

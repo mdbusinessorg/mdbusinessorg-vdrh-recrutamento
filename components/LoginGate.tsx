@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase";
 
-const MATIAS_EMAIL = (process.env.NEXT_PUBLIC_MATIAS_EMAIL || "").toLowerCase();
+const MATIAS_EMAIL = (process.env.NEXT_PUBLIC_MATIAS_EMAIL || "").trim().toLowerCase();
 
 export function LoginGate() {
   const [email, setEmail] = useState("");
@@ -16,7 +16,7 @@ export function LoginGate() {
     e.preventDefault();
     setMessage("");
 
-    if (MATIAS_EMAIL && email.toLowerCase() !== MATIAS_EMAIL) {
+    if (MATIAS_EMAIL && email.trim().toLowerCase() !== MATIAS_EMAIL) {
       setMessage("Acesso reservado ao Matias. Usa o email autorizado.");
       return;
     }

@@ -53,5 +53,5 @@ export async function getAuthenticatedUser(): Promise<User | null> {
 
 export async function isAdmin(user?: User | null): Promise<boolean> {
   if (!user?.email) return false;
-  return user.email.toLowerCase() === (process.env.MATIAS_EMAIL || "").toLowerCase();
+  return user.email.trim().toLowerCase() === (process.env.MATIAS_EMAIL || "").trim().toLowerCase();
 }

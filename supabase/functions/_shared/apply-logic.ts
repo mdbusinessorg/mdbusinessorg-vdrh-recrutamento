@@ -57,7 +57,7 @@ export interface GroqResponse {
 }
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_MODEL = "llama-3.1-70b-versatile";
+const DEFAULT_MODEL = "llama-3.3-70b-versatile";
 
 export function getSupabaseClient(): SupabaseClient {
   const url = Deno.env.get("SUPABASE_URL");

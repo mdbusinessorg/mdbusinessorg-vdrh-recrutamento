@@ -7,7 +7,7 @@ Plataforma privada e separada do MÔ SALO para auto-candidatura do Matias.
 - Next.js 14 + TypeScript + Tailwind CSS
 - Supabase (novo projecto: `noywnuafpxvxvmfkjtbh`)
 - Supabase Edge Functions (`process-new-job`, `retry-pending-jobs`)
-- Groq (modelo `llama-3.1-70b-versatile`)
+- Groq (modelo `llama-3.3-70b-versatile`)
 - Gmail SMTP (`suporte@mosalo.eu.cc`)
 
 ## Repositório

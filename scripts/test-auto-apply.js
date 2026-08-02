@@ -23,7 +23,7 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
 });
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL = "llama-3.1-70b-versatile";
+const MODEL = "llama-3.3-70b-versatile";
 
 const TEST_EMAIL = "test@mosalo.local";
 const TEST_PASSWORD = "test-password-123";

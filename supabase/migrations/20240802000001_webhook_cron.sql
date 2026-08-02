@@ -50,4 +50,4 @@ SELECT cron.schedule('retry-pending-jobs-daily', '0 8 * * *', 'SELECT public.cro
 
 -- Scraper horario do AngolaEmprego
 SELECT cron.unschedule('scrape-jobs-hourly') FROM cron.job WHERE jobname = 'scrape-jobs-hourly';
-SELECT cron.schedule('scrape-jobs-hourly', '0 * * * *', 'SELECT net.http_post(''https://noywnuafpxvxvmfkjtbh.supabase.co/functions/v1/scrape-jobs'', NULL, ''{"Content-Type":"application/json"}''::jsonb, 60000);');
+SELECT cron.schedule('scrape-jobs-hourly', '0 * * * *', 'SELECT net.http_post(''https://noywnuafpxvxvmfkjtbh.supabase.co/functions/v1/scrape-jobs'', NULL, ''{}''::jsonb, ''{"Content-Type":"application/json"}''::jsonb, 60000);');

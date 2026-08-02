@@ -84,13 +84,12 @@ export async function POST(req: NextRequest) {
     }
 
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
 
     let cvText = "";
     let parsed: CVParseResult | null = null;
 
     try {
-      const pdf = new PDFParse(buffer);
+      const pdf = new PDFParse({ data: arrayBuffer });
       const pdfResult = await pdf.getText();
       cvText = pdfResult.text || "";
       const apiKey = process.env.GROQ_API_KEY;

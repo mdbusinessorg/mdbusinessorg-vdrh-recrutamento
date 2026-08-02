@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.217.0/http/server.ts";
-import { getSupabaseClient, processJob } from "../_shared/apply-logic.ts";
+import { getSupabaseClient, logApplication, processJob } from "../_shared/apply-logic.ts";
 
 serve(async (req) => {
   try {
@@ -47,6 +47,15 @@ serve(async (req) => {
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         console.error(`Retry falhou para ${job.id}:`, msg);
+        try {
+          await logApplication(supabase, {
+            external_job_id: job.id,
+            status: "erro",
+            erro_detalhe: msg,
+          });
+        } catch (logErr) {
+          console.error("Falha ao registar erro no retry:", logErr);
+        }
         results.push({ job_id: job.id, status: "error", error: msg });
       }
     }

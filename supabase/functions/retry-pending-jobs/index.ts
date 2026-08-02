@@ -29,18 +29,23 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, message: "Limite diário atingido" }), { status: 200 });
     }
 
+    const { data: logs } = await supabase
+      .from("job_applications_log")
+      .select("external_job_id");
+    const processedIds = [...new Set((logs || []).map((l) => l.external_job_id).filter(Boolean))];
+    const excludeFilter = processedIds.length ? `(${processedIds.join(",")})` : "('')";
     const { data: pending } = await supabase
       .from("external_jobs")
       .select("id")
-      .not(
-        "id",
-        "in",
-        `(select external_job_id from job_applications_log)`
-      )
+      .not("id", "in", excludeFilter)
       .limit(remaining);
 
     const results: { job_id: string; status: string; error?: string }[] = [];
-    for (const job of pending || []) {
+    for (let i = 0; i < (pending || []).length; i++) {
+      const job = pending[i];
+      if (i > 0) {
+        await new Promise((r) => setTimeout(r, 10000));
+      }
       try {
         await processJob(supabase, job.id);
         results.push({ job_id: job.id, status: "ok" });

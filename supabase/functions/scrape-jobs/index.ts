@@ -1,9 +1,25 @@
 import { serve } from "https://deno.land/std@0.217.0/http/server.ts";
 import { getSupabaseClient } from "../_shared/apply-logic.ts";
 
-const LISTING_URL = "https://angolaemprego.com/vagas";
-const MAX_JOBS_PER_RUN = 20;
+const BASE_URL = "https://angolaemprego.com/vagas";
+const DEFAULT_QUERIES = ["rigger", "offshore", "Banksman"];
+const MAX_JOBS_PER_RUN = 5;
+const PROCESS_DELAY_MS = 10000;
 const USER_AGENT = "Mozilla/5.0 (compatible; MosaloAutoApply/1.0)";
+
+async function triggerProcessJob(jobId: string) {
+  const baseUrl = Deno.env.get("SUPABASE_URL");
+  if (!baseUrl) return;
+  try {
+    await fetch(`${baseUrl}/functions/v1/process-new-job`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: jobId }),
+    });
+  } catch (e) {
+    console.warn(`Falha ao invocar process-new-job para ${jobId}:`, e);
+  }
+}
 
 interface ListingItem {
   url: string;
@@ -32,7 +48,9 @@ function extractLdJsonScripts(html: string): string[] {
 function parseJsonLd<T>(html: string, typeName: string): T | null {
   for (const script of extractLdJsonScripts(html)) {
     try {
-      const data = JSON.parse(script);
+      // AngolaEmprego inclui novas linhas literais no JSON-LD; limpamos control chars
+      const sanitized = script.replace(/[\x00-\x1F]/g, " ");
+      const data = JSON.parse(sanitized);
       if (data["@type"] === typeName) return data as T;
     } catch {
       // ignora JSON malformado
@@ -44,18 +62,52 @@ function parseJsonLd<T>(html: string, typeName: string): T | null {
 function parseListing(html: string): ListingItem[] {
   const page = parseJsonLd<{ mainEntity?: { itemListElement?: ListingItem[] } }>(html, "CollectionPage");
   const items = page?.mainEntity?.itemListElement || [];
-  return items.slice(0, MAX_JOBS_PER_RUN);
+  return items;
 }
 
 function parseJobDetail(html: string): JobPosting | null {
   return parseJsonLd<JobPosting>(html, "JobPosting");
 }
 
-function extractEmail(text?: string): string | null {
-  if (!text) return null;
+function cleanEmail(raw?: string): string | null {
+  if (!raw) return null;
   const regex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
-  const matches = text.match(regex);
-  return matches ? matches[0] : null;
+  const matches = raw.match(regex);
+  if (!matches) return null;
+  for (const match of matches) {
+    const cleaned = match.replace(/(\.[A-Za-z]{2,6})[A-Za-z0-9_]+$/, "$1");
+    if (/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(cleaned)) return cleaned;
+  }
+  return null;
+}
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchListing(query: string, page = 1): Promise<ListingItem[]> {
+  const url = query
+    ? `${BASE_URL}?q=${encodeURIComponent(query)}&page=${page}`
+    : `${BASE_URL}?page=${page}`;
+  const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+  if (!res.ok) {
+    console.warn(`Falha ao aceder ${url}: ${res.status}`);
+    return [];
+  }
+  const html = await res.text();
+  return parseListing(html);
+}
+
+function getQueries(): string[] {
+  const env = Deno.env.get("SCRAPE_QUERIES");
+  if (!env) return DEFAULT_QUERIES;
+  return env.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
 serve(async (req) => {
@@ -77,17 +129,28 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, message: "Módulo desactivado" }), { status: 200 });
     }
 
-    const listRes = await fetch(LISTING_URL, { headers: { "User-Agent": USER_AGENT } });
-    if (!listRes.ok) throw new Error(`Falha ao aceder a ${LISTING_URL}: ${listRes.status}`);
-    const listHtml = await listRes.text();
-    const listings = parseListing(listHtml);
+    const queries = getQueries();
+    const seen = new Set<string>();
+    const listings: ListingItem[] = [];
+
+    for (const query of queries) {
+      for (let page = 1; page <= 2; page++) {
+        if (listings.length >= MAX_JOBS_PER_RUN) break;
+        const items = await fetchListing(query, page);
+        for (const item of items) {
+          if (!item.url || seen.has(item.url)) continue;
+          seen.add(item.url);
+          listings.push(item);
+          if (listings.length >= MAX_JOBS_PER_RUN) break;
+        }
+      }
+      if (listings.length >= MAX_JOBS_PER_RUN) break;
+    }
 
     const results: { url: string; title: string; status: string }[] = [];
     let insertedCount = 0;
 
     for (const item of listings) {
-      if (!item.url) continue;
-
       try {
         const { count } = await supabase
           .from("external_jobs")
@@ -114,7 +177,8 @@ serve(async (req) => {
         }
 
         const description = job.description || "";
-        const contactEmail = extractEmail(description);
+        const pageText = htmlToText(detailHtml);
+        const contactEmail = cleanEmail(description) || cleanEmail(pageText);
 
         const payload = {
           title: job.title || item.name || "",
@@ -128,12 +192,14 @@ serve(async (req) => {
           raw_data: job,
         };
 
-        const { error } = await supabase.from("external_jobs").insert(payload);
-        if (error) {
-          results.push({ url: item.url, title: payload.title, status: `erro DB: ${error.message}` });
+        const { data: inserted, error } = await supabase.from("external_jobs").insert(payload).select("id").single();
+        if (error || !inserted) {
+          results.push({ url: item.url, title: payload.title, status: `erro DB: ${error?.message || "sem id"}` });
         } else {
           insertedCount++;
           results.push({ url: item.url, title: payload.title, status: "inserido" });
+          await triggerProcessJob(inserted.id);
+          await new Promise((r) => setTimeout(r, PROCESS_DELAY_MS));
         }
       } catch (itemError) {
         const msg = itemError instanceof Error ? itemError.message : String(itemError);

@@ -71,7 +71,13 @@ export function extractEmail(text?: string | null): string | null {
   if (!text) return null;
   const regex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
   const matches = text.match(regex);
-  return matches ? matches[0] : null;
+  if (!matches) return null;
+  for (const match of matches) {
+    // remove palavras coladas ao TLD (ex: "email@dominio.comEncontre")
+    const cleaned = match.replace(/(\.[A-Za-z]{2,6})[A-Za-z0-9_]+$/, "$1");
+    if (/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(cleaned)) return cleaned;
+  }
+  return null;
 }
 
 export async function getSettings(supabase: SupabaseClient): Promise<Settings | null> {

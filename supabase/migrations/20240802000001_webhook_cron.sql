@@ -41,11 +41,8 @@ BEGIN
 END;
 $$;
 
+-- Remover trigger automático para evitar concorrência Groq; scraper/retry processam em sequência
 DROP TRIGGER IF EXISTS external_jobs_insert_webhook ON public.external_jobs;
-CREATE TRIGGER external_jobs_insert_webhook
-  AFTER INSERT ON public.external_jobs
-  FOR EACH ROW
-  EXECUTE FUNCTION public.trigger_process_new_job();
 
 -- Agenda o retry diario (remove antigo se existir)
 SELECT cron.unschedule('retry-pending-jobs-daily') FROM cron.job WHERE jobname = 'retry-pending-jobs-daily';

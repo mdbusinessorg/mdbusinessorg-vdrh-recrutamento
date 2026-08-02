@@ -19,7 +19,7 @@ interface ExternalJob {
   source: string | null;
   created_at: string | null;
   updated_at: string | null;
-  job_applications_log: JobApplicationLog[] | null;
+  job_applications_log: JobApplicationLog | null;
 }
 
 const statusLabel: Record<string, string> = {
@@ -105,7 +105,7 @@ export default async function VagasPage() {
               </thead>
               <tbody>
                 {(jobs || []).map((job) => {
-                  const log = job.job_applications_log?.[0];
+                  const log = job.job_applications_log;
                   const status = log?.status || "pendente";
                   return (
                     <tr key={job.id} className="border-t border-slate-100 hover:bg-slate-50">

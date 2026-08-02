@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.217.0/http/server.ts";
-import { getSupabaseClient } from "../_shared/apply-logic.ts";
+import { getSupabaseClient, extractEmail } from "../_shared/apply-logic.ts";
 
 const BASE_URL = "https://angolaemprego.com/vagas";
 const DEFAULT_QUERIES = ["rigger", "offshore", "Banksman"];
@@ -67,18 +67,6 @@ function parseListing(html: string): ListingItem[] {
 
 function parseJobDetail(html: string): JobPosting | null {
   return parseJsonLd<JobPosting>(html, "JobPosting");
-}
-
-function cleanEmail(raw?: string): string | null {
-  if (!raw) return null;
-  const regex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
-  const matches = raw.match(regex);
-  if (!matches) return null;
-  for (const match of matches) {
-    const cleaned = match.replace(/(\.[A-Za-z]{2,6})[A-Za-z0-9_]+$/, "$1");
-    if (/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(cleaned)) return cleaned;
-  }
-  return null;
 }
 
 function htmlToText(html: string): string {
@@ -178,7 +166,7 @@ serve(async (req) => {
 
         const description = job.description || "";
         const pageText = htmlToText(detailHtml);
-        const contactEmail = cleanEmail(description) || cleanEmail(pageText);
+        const contactEmail = extractEmail(description) || extractEmail(pageText);
 
         const payload = {
           title: job.title || item.name || "",

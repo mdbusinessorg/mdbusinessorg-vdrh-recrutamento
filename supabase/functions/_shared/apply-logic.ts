@@ -67,15 +67,75 @@ export function getSupabaseClient(): SupabaseClient {
   return createClient(url, serviceKey, { auth: { persistSession: false } });
 }
 
+const COMMON_TLDS = new Set([
+  "com", "org", "net", "edu", "gov", "info", "biz", "name", "pro", "coop", "museum",
+  "aero", "jobs", "mobi", "travel", "app", "dev", "io", "ai", "co", "uk", "fr", "de",
+  "it", "es", "pt", "us", "br", "ao", "mz", "ml", "ng", "ke", "za", "zm", "cd", "ao",
+  "co.ao", "co.uk", "co.za", "com.br", "com.pt", "com.ao", "com.ang", "gmail.com",
+  "hotmail.com", "outlook.com", "yahoo.com", "live.com", "icloud.com", "mail.com",
+  "protonmail.com", "yandex.com", "qq.com", "163.com", "126.com",
+]);
+
+function getSingleTlds(): string[] {
+  return [...COMMON_TLDS].filter((t) => !t.includes(".")).sort((a, b) => b.length - a.length);
+}
+
+function getDoubleTlds(): string[] {
+  return [...COMMON_TLDS].filter((t) => t.includes(".")).sort((a, b) => b.length - a.length);
+}
+
+function cutEmail(match: string): string | null {
+  const lower = match.toLowerCase();
+  const at = lower.lastIndexOf("@");
+  if (at <= 0) return null;
+  const local = match.slice(0, at + 1);
+  const domainRest = match.slice(at + 1);
+  const domainParts = domainRest.split(".");
+  const domainPartsLower = domainRest.toLowerCase().split(".");
+  let cleanParts: string[] | null = null;
+
+  // Tenta TLDs de duas partes (ex: co.ao, co.uk) no final do domínio
+  if (domainParts.length >= 2) {
+    const lastTwo = domainPartsLower[domainParts.length - 2] + "." + domainPartsLower[domainParts.length - 1];
+    const lastTwoOrig = domainParts[domainParts.length - 2] + "." + domainParts[domainParts.length - 1];
+    for (const tld of getDoubleTlds()) {
+      if (lastTwo.startsWith(tld)) {
+        const tldParts = tld.split(".");
+        const remaining = lastTwoOrig.slice(tld.length);
+        if (remaining !== "" && /[a-z0-9-]/.test(remaining[0])) continue;
+        cleanParts = domainParts.slice(0, -2).concat(tldParts);
+        break;
+      }
+    }
+  }
+
+  // Tenta TLDs de uma parte no último segmento
+  if (!cleanParts) {
+    const last = domainPartsLower[domainParts.length - 1];
+    const lastOrig = domainParts[domainParts.length - 1];
+    for (const tld of getSingleTlds()) {
+      if (last.startsWith(tld)) {
+        const remaining = lastOrig.slice(tld.length);
+        if (remaining !== "" && /[a-z0-9-]/.test(remaining[0])) continue;
+        cleanParts = domainParts.slice(0, -1).concat([tld]);
+        break;
+      }
+    }
+  }
+
+  if (!cleanParts) return null;
+  const clean = local + cleanParts.join(".");
+  return /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(clean) ? clean : null;
+}
+
 export function extractEmail(text?: string | null): string | null {
   if (!text) return null;
-  const regex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
+  const regex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/gi;
   const matches = text.match(regex);
   if (!matches) return null;
   for (const match of matches) {
-    // remove palavras coladas ao TLD (ex: "email@dominio.comEncontre")
-    const cleaned = match.replace(/(\.[A-Za-z]{2,6})[A-Za-z0-9_]+$/, "$1");
-    if (/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(cleaned)) return cleaned;
+    const cleaned = cutEmail(match);
+    if (cleaned) return cleaned;
   }
   return null;
 }

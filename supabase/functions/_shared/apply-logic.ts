@@ -128,6 +128,8 @@ function cutEmail(match: string): string | null {
   return /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(clean) ? clean : null;
 }
 
+const BLOCKED_DOMAINS = new Set(["angolaemprego.com"]);
+
 export function extractEmail(text?: string | null): string | null {
   if (!text) return null;
   const regex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/gi;
@@ -135,7 +137,10 @@ export function extractEmail(text?: string | null): string | null {
   if (!matches) return null;
   for (const match of matches) {
     const cleaned = cutEmail(match);
-    if (cleaned) return cleaned;
+    if (cleaned) {
+      const domain = cleaned.split("@")[1]?.toLowerCase();
+      if (domain && !BLOCKED_DOMAINS.has(domain)) return cleaned;
+    }
   }
   return null;
 }

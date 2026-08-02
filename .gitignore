@@ -5,3 +5,5 @@ node_modules
 .vercel
 netlify
 .DS_Store
+*.tsbuildinfo
+supabase/.temp/

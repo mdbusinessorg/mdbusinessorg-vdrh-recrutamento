@@ -3,8 +3,8 @@ import { getSupabaseClient, extractEmail } from "../_shared/apply-logic.ts";
 
 const BASE_URL = "https://angolaemprego.com/vagas";
 const DEFAULT_QUERIES = ["rigger", "offshore", "Banksman"];
-const MAX_JOBS_PER_RUN = 5;
-const PROCESS_DELAY_MS = 10000;
+const MAX_JOBS_PER_RUN = 30;
+const PROCESS_DELAY_MS = 2000;
 const USER_AGENT = "Mozilla/5.0 (compatible; MosaloAutoApply/1.0)";
 
 async function triggerProcessJob(jobId: string) {

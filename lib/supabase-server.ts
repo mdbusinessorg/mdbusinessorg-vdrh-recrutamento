@@ -1,4 +1,5 @@
 import { createClient as createSupabaseClient, type User } from "@supabase/supabase-js";
+import { createServerClient, type SetAllCookies } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import ws from "ws";
 
@@ -10,7 +11,7 @@ function getSupabaseUrlAndKey() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) throw new Error("Supabase URL/anon key em falta");
-  return { url, key, ref: new URL(url).hostname.split(".")[0] };
+  return { url, key };
 }
 
 export function createServiceRoleClient() {
@@ -21,24 +22,33 @@ export function createServiceRoleClient() {
 }
 
 export async function getAuthenticatedUser(): Promise<User | null> {
-  const { url, key, ref } = getSupabaseUrlAndKey();
+  const { url, key } = getSupabaseUrlAndKey();
   const cookieStore = cookies();
-  const tokenCookie = cookieStore.get(`sb-${ref}-auth-token`);
-  if (!tokenCookie?.value) return null;
 
-  let accessToken: string | null = null;
-  try {
-    const parsed = JSON.parse(tokenCookie.value);
-    accessToken = parsed?.access_token || null;
-  } catch {
-    accessToken = tokenCookie.value;
-  }
-  if (!accessToken) return null;
+  const supabase = createServerClient<Database>(url, key, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet: Parameters<SetAllCookies>[0]) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        } catch {
+          // ignorar em páginas estáticas ou quando não é possível escrever cookies
+        }
+      },
+    },
+  });
 
-  const supabase = createSupabaseClient(url, key, { realtime: realtimeOptions });
-  const { data, error } = await supabase.auth.getUser(accessToken);
-  if (error || !data.user) return null;
-  return data.user;
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) return null;
+  return user;
 }
 
 export async function isAdmin(user?: User | null): Promise<boolean> {

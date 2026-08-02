@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase";
 
 const MATIAS_EMAIL = (process.env.NEXT_PUBLIC_MATIAS_EMAIL || "").toLowerCase();
@@ -10,7 +10,7 @@ export function LoginGate() {
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [message, setMessage] = useState("");
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -21,21 +21,27 @@ export function LoginGate() {
       return;
     }
 
-    startTransition(async () => {
+    setPending(true);
+    try {
       const supabase = createClient();
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        setMessage(error ? error.message : "");
+        if (error) {
+          setMessage(error.message);
+        } else {
+          window.location.href = "/admin/candidaturas";
+        }
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
-        setMessage(
-          error
-            ? error.message
-            : "Registo iniciado. Verifica o email para confirmar (ou desactiva confirmação por email nas settings do Supabase)."
-        );
+        if (error) {
+          setMessage(error.message);
+        } else {
+          setMessage("Registo iniciado. Verifica o email para confirmar.");
+        }
       }
-      if (!message) window.location.reload();
-    });
+    } finally {
+      setPending(false);
+    }
   }
 
   return (

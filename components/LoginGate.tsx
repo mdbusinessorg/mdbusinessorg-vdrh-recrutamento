@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase";
 
+const MATIAS_EMAIL = (process.env.NEXT_PUBLIC_MATIAS_EMAIL || "").toLowerCase();
+
 export function LoginGate() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -13,6 +15,12 @@ export function LoginGate() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
+
+    if (MATIAS_EMAIL && email.toLowerCase() !== MATIAS_EMAIL) {
+      setMessage("Acesso reservado ao Matias. Usa o email autorizado.");
+      return;
+    }
+
     startTransition(async () => {
       const supabase = createClient();
       if (mode === "login") {

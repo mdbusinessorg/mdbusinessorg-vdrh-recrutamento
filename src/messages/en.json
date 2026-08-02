@@ -1,0 +1,294 @@
+{
+  "metadata": {
+    "title": "VDRH — Human Resources Vision and Development",
+    "description": "Human Resources consultancy in Angola. Recruitment, talent development, diversity, inclusion and labour compliance."
+  },
+  "nav": {
+    "home": "Home",
+    "services": "Services",
+    "about": "About Us",
+    "career": "Career",
+    "contact": "Contact",
+    "requestService": "Request Service",
+    "schedule": "Schedule",
+    "apply": "Apply"
+  },
+  "common": {
+    "learnMore": "Learn more",
+    "send": "Send",
+    "sending": "Sending...",
+    "success": "Success",
+    "error": "Error",
+    "close": "Close",
+    "openPositions": "Open positions",
+    "applyNow": "Join us",
+    "requestServiceBtn": "Request Service",
+    "scheduleBtn": "Schedule Service",
+    "phone": "(+244) 923 789 748",
+    "email": "geral@vdrh.ao",
+    "address": "Multicenter, Camama, Luanda",
+    "scheduleTime": "Monday – Friday, 08:00–16:30",
+    "whatsappMessage": "👋 Welcome! VDRH - Human Resources Vision and Development. How can we help? Get in touch",
+    "copyright": "© VDRH All rights reserved – {year} By Fernando Quissanga",
+    "whatsappLink": "https://wa.link/1m7xru"
+  },
+  "home": {
+    "heroTitle": "VDRH — Human Resources Vision and Development",
+    "heroText": "The development of human capital is a constant gear that cannot stop in a corporation; without maintenance, the consequences can be irreparable.",
+    "aboutTitle": "About Us",
+    "aboutIntro": "VDRH – Vision and Development of Human Resources is a project oriented towards economic and social sustainability. We act through a set of actions and activities aimed at improving the quality of life, reducing inequalities, expanding rights and ensuring access to services.",
+    "missionVisionTitle": "Mission and Vision",
+    "missionTitle": "Mission",
+    "missionText": "To provide quality services in people management, boosting human capital development and inspiring personal overcoming with respect for differences, responsibility, solidarity, cooperation and the principle of integrity and love for others.",
+    "visionTitle": "Vision",
+    "visionText": "To be an organization of economic and social sustainability that promotes continuous improvement of quality of life, reduces inequality, expands rights and guarantees access to services, considering present and future generations.",
+    "objectivesTitle": "Objectives",
+    "objectives": [
+      "Promote human success, with attention to inclusion and gender equity;",
+      "Value interpersonal relationships and teamwork;",
+      "Transmit values that sustain ethical conduct and citizenship;",
+      "Reinforce identity and character, aligned with purpose and responsibility."
+    ],
+    "valuesTitle": "Values",
+    "values": [
+      { "title": "Empathy", "text": "We put ourselves in the place of those we serve, understanding real needs." },
+      { "title": "Resilience", "text": "We overcome obstacles with determination and continuous learning." },
+      { "title": "Excellence and continuous improvement", "text": "We pursue high standards and lasting impact." },
+      { "title": "Solidarity", "text": "Commitment to the well-being of the communities we serve." },
+      { "title": "Teamwork", "text": "Greater results are born from cooperation." },
+      { "title": "Integrity and ethics", "text": "Just, honest and transparent action, honoring commitments." },
+      { "title": "Rigor", "text": "Compliance with procedures and methods, creating effective and reliable work habits." }
+    ],
+    "servicesTitle": "What we do",
+    "servicesIntro": "VDRH is a service company that offers customized solutions to increase the value of the intangible capital of its partners. We operate in the management and development of human capital, covering HR needs end-to-end.",
+    "servicesCards": [
+      { "title": "Talent Development", "text": "Recruitment and selection, career plan, competency matrix, training and integration mentoring." },
+      { "title": "Diversity, Inclusion and Equity", "text": "Female workforce development programmes and promotion of gender equity." },
+      { "title": "Compliance and Governance", "text": "Occupational qualifier, HRD Plan, annual balance, performance and career management." }
+    ],
+    "statsTitle": "Progress!",
+    "stats": [
+      { "label": "Services", "value": "12" },
+      { "label": "Consulting", "value": "8" },
+      { "label": "Employees", "value": "15" },
+      { "label": "Partners", "value": "+", "suffix": "1" }
+    ],
+    "quote": "Always treat your employees exactly as you want them to treat your best customers.",
+    "quoteAuthor": "Dr. Verónica Mabanga",
+    "quoteRole": "Consultant",
+    "partnersTitle": "Our Partners",
+    "teamTitle": "Our Team",
+    "team": [
+      { "name": "Joana Manassas", "role": "HR Coordinator" },
+      { "name": "Ana Africano", "role": "Legal Assistant" },
+      { "name": "Cristina Armísio", "role": "Project Assistant" },
+      { "name": "Isabel Diogo", "role": "Administrative Assistant" }
+    ]
+  },
+  "services": {
+    "title": "Services",
+    "intro": "We offer customized solutions to increase the value of our partners' intangible capital, covering end-to-end HR needs.",
+    "items": [
+      {
+        "title": "Talent Development",
+        "items": [
+          "Recruitment and Selection",
+          "Career Plan (Progression and Succession)",
+          "Competency Matrix",
+          "Training and Talent Management",
+          "Training Plan",
+          "Integration Mentoring — in Organizational Culture"
+        ]
+      },
+      {
+        "title": "Diversity, Inclusion and Equity",
+        "items": [
+          "Female Workforce Development Programme",
+          "Promotion of Gender Equity"
+        ]
+      },
+      {
+        "title": "HR Structure and Process",
+        "items": [
+          "Job Descriptions",
+          "Salary Structure — by Function/Level",
+          "Corporate Policy, Process and Procedure",
+          "HR Process Audit"
+        ]
+      },
+      {
+        "title": "Compliance and Governance",
+        "items": [
+          "Occupational Qualifier",
+          "HRD and Annual Balance — in accordance with Ministry standards",
+          "Performance and Career Progression Management"
+        ]
+      },
+      {
+        "title": "Labour Administration and Obligations",
+        "items": [
+          "Staff Secondment — temporarily provide workers while maintaining the original employment contract with VDRH",
+          "Execution and Termination of Employment Contracts — according to applicable legislation",
+          "Employee Registration and Processing on the Social Security Portal (INSS)",
+          "Registration and Submission of RENT"
+        ]
+      }
+    ],
+    "ctaTitle": "Need a personalized service?",
+    "ctaText": "Contact us or schedule a consultancy to discuss your organization's needs.",
+    "testimonialsTitle": "Testimonials",
+    "testimonials": [
+      { "text": "Thanks to this company's excellent work, we were able to recruit talents aligned with our values. The service is fast, transparent and very efficient. We are extremely satisfied with the results.", "author": "Manuel Ngunza" },
+      { "text": "The team showed great professionalism from the first contact. They helped us find qualified employees in a short time. Today we have a stronger and more motivated team. We recommend their services without hesitation.", "author": "Ana Quissanga" },
+      { "text": "The recruitment service exceeded our expectations. We received well-prepared candidates with the ideal profile for our needs. Undoubtedly, a reliable partner for any company.", "author": "João Samuel" },
+      { "text": "Excellent follow-up throughout the entire selection process. VDRH understood exactly the profile we needed and delivered quality results.", "author": "Ottoniela Bezerra" }
+    ]
+  },
+  "career": {
+    "title": "Career",
+    "subtitle": "Recruitment",
+    "intro": "Join our team and be part of projects that transform organizations and develop people.",
+    "jobs": [
+      {
+        "title": "Deputy Finance Director",
+        "requirements": [
+          "BA in Finance, Accounting or Management;",
+          "Registered with the accountants' order (advantage);",
+          "Minimum 5 years of experience in similar roles;",
+          "Fluency in English (mandatory);",
+          "Experience in SAP ERP and accounting mastery (mandatory);",
+          "Experience in VAT refund and SAF-T."
+        ],
+        "responsibilities": "Ensure the accuracy of financial statements and monthly closing reports; organize, control and schedule tasks of the accounting and finance team; control the execution of internal control processes; report to the Finance Director; ensure payments and reconciliation of taxes (INSS, IRT, Industrial Taxes, etc.)."
+      },
+      {
+        "title": "Commercial Manager",
+        "requirements": [
+          "Degree in Business Administration, Management, Accounting or equivalent;",
+          "5+ years of experience;",
+          "Fluent English;",
+          "Excel proficiency;",
+          "Knowledge of commercial legislation."
+        ],
+        "responsibilities": "Define commercial strategy, draw up business plan, define commercial/marketing policies, manage team, monitor commercial indicators and customer satisfaction."
+      },
+      {
+        "title": "Pedagogical Coordinator",
+        "requirements": [
+          "Degree in Pedagogy or Psychology;",
+          "5+ years of experience;",
+          "Angolan nationality with good command of Portuguese."
+        ],
+        "responsibilities": "Supervise pedagogical policy, advise on timetables/grade books/exams, prepare monthly pedagogical reports."
+      },
+      {
+        "title": "Accounting Coordinator",
+        "requirements": [
+          "Degree in Accounting or equivalent;",
+          "5+ years of experience;",
+          "Fluent English;",
+          "Communication and reporting;",
+          "Knowledge of financial/fiscal markets."
+        ],
+        "responsibilities": "Plan and lead the accounting department; payment issuance, accounts payable, bank reconciliations, accounting closing."
+      },
+      {
+        "title": "Project Manager",
+        "requirements": [
+          "Degree in Management, Administration, Psychology, HR or Law;",
+          "5+ years of experience;",
+          "Angolan nationality;",
+          "Good Portuguese."
+        ],
+        "responsibilities": "Manage internal policy, advise on internal strategies/financial plans/people management and conflicts; monthly internal reports."
+      },
+      {
+        "title": "Scaffolding Supervisor",
+        "requirements": [
+          "Degree in technical disciplines or related fields;",
+          "Angolan or foreign nationality;",
+          "5+ years of experience;",
+          "English preferred."
+        ],
+        "responsibilities": "Supervise scaffolding assembly techniques in industrial environments and offshore operations; use of work-at-height equipment; offshore experience."
+      }
+    ]
+  },
+  "apply": {
+    "title": "Application",
+    "subtitle": "Submit your application",
+    "form": {
+      "name": "Full name",
+      "email": "E-mail",
+      "phone": "Phone",
+      "position": "Position you are applying for",
+      "cv": "CV (PDF)",
+      "coverLetter": "Cover letter (optional)",
+      "submit": "Submit application",
+      "success": "Application sent successfully. We will contact you soon.",
+      "error": "An error occurred while sending. Please try again."
+    }
+  },
+  "requestService": {
+    "title": "Request Service",
+    "subtitle": "Request Service",
+    "form": {
+      "name": "Name",
+      "company": "Company",
+      "email": "E-mail",
+      "phone": "Phone",
+      "serviceType": "Service type",
+      "serviceOptions": [
+        "Talent Development",
+        "Diversity, Inclusion and Equity",
+        "HR Structure and Process",
+        "Compliance and Governance",
+        "Labour Administration and Obligations"
+      ],
+      "message": "Message",
+      "submit": "Request",
+      "success": "Request sent successfully. Our team will contact you soon.",
+      "error": "An error occurred while sending. Please try again."
+    }
+  },
+  "schedule": {
+    "title": "Scheduling",
+    "subtitle": "Schedule Consultancy",
+    "form": {
+      "name": "Name",
+      "company": "Company",
+      "email": "E-mail",
+      "phone": "Phone",
+      "date": "Preferred date",
+      "time": "Preferred time",
+      "consultancyType": "Type of consultancy",
+      "consultancyOptions": [
+        "Talent Development",
+        "Diversity, Inclusion and Equity",
+        "HR Structure and Process",
+        "Compliance and Governance",
+        "Labour Administration and Obligations"
+      ],
+      "message": "Message",
+      "submit": "Schedule",
+      "success": "Scheduling requested successfully. We will confirm soon.",
+      "error": "An error occurred while sending. Please try again."
+    }
+  },
+  "contact": {
+    "title": "Contact",
+    "form": {
+      "name": "Name",
+      "email": "E-mail",
+      "phone": "Phone",
+      "subject": "Subject",
+      "message": "Message",
+      "submit": "Send message",
+      "success": "Message sent successfully.",
+      "error": "An error occurred while sending. Please try again."
+    },
+    "locationTitle": "Location",
+    "scheduleTitle": "Opening Hours",
+    "supportTitle": "Customer Support"
+  }
+}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient, getAuthenticatedUser, isAdmin } from "@/lib/supabase-server";
-import { PDFParse } from "pdf-parse";
+import pdfParse from "pdf-parse";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
@@ -89,8 +89,8 @@ export async function POST(req: NextRequest) {
     let parsed: CVParseResult | null = null;
 
     try {
-      const pdf = new PDFParse({ data: arrayBuffer });
-      const pdfResult = await pdf.getText();
+      const buffer = Buffer.from(arrayBuffer);
+      const pdfResult = await pdfParse(buffer);
       cvText = pdfResult.text || "";
       const apiKey = process.env.GROQ_API_KEY;
       if (apiKey && cvText.trim().length > 50) {

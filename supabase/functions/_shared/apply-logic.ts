@@ -22,6 +22,7 @@ export interface CandidateCV {
   cargo_alvo: string;
   arquivo_url: string;
   skills_cobertas?: string[];
+  conteudo_texto?: string | null;
   ativo: boolean;
 }
 
@@ -173,35 +174,52 @@ export async function checkDailyLimit(supabase: SupabaseClient, limit: number): 
 export async function callGroq(
   apiKey: string,
   model: string,
-  messages: any[]
+  messages: any[],
+  retries = 3
 ): Promise<GroqResponse | null> {
-  const resp = await fetch(GROQ_URL, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.4,
-      max_tokens: 1200,
-      response_format: { type: "json_object" },
-    }),
-  });
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`Groq HTTP ${resp.status}: ${text}`);
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const resp = await fetch(GROQ_URL, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: 0.4,
+          max_tokens: 1200,
+          response_format: { type: "json_object" },
+        }),
+      });
+      if (!resp.ok) {
+        const text = await resp.text();
+        if ((resp.status === 429 || resp.status >= 500) && attempt < retries) {
+          const delay = 2 ** attempt * 1000;
+          console.warn(`Groq ${resp.status}, retry ${attempt + 1}/${retries} após ${delay}ms`);
+          await new Promise((r) => setTimeout(r, delay));
+          lastError = new Error(`Groq HTTP ${resp.status}: ${text}`);
+          continue;
+        }
+        throw new Error(`Groq HTTP ${resp.status}: ${text}`);
+      }
+      const json = await resp.json();
+      const content = json.choices?.[0]?.message?.content;
+      if (!content) throw new Error("Resposta vazia da Groq");
+      const parsed = typeof content === "string" ? JSON.parse(content) : content;
+      return parsed as GroqResponse;
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+      if (attempt < retries) {
+        const delay = 2 ** attempt * 1000;
+        console.warn(`Groq erro, retry ${attempt + 1}/${retries} após ${delay}ms: ${lastError.message}`);
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
   }
-  const json = await resp.json();
-  const content = json.choices?.[0]?.message?.content;
-  if (!content) throw new Error("Resposta vazia da Groq");
-  try {
-    const parsed = typeof content === "string" ? JSON.parse(content) : content;
-    return parsed as GroqResponse;
-  } catch (e) {
-    throw new Error(`JSON inválido da Groq: ${content}`);
-  }
+  throw lastError || new Error("Falha ao contactar a Groq");
 }
 
 export function buildPrompt(
@@ -211,8 +229,10 @@ export function buildPrompt(
 ): any[] {
   const cvsBlock = cvs
     .map(
-      (cv) =>
-        `- ID: ${cv.id}\n  Título: ${cv.titulo}\n  Cargo-alvo: ${cv.cargo_alvo}\n  Skills cobertas: ${(cv.skills_cobertas || []).join(", ")}`
+      (cv) => {
+        const conteudo = (cv.conteudo_texto || "").slice(0, 1200);
+        return `- ID: ${cv.id}\n  Título: ${cv.titulo}\n  Cargo-alvo: ${cv.cargo_alvo}\n  Skills cobertas: ${(cv.skills_cobertas || []).join(", ")}${conteudo ? "\n  Conteúdo resumido: " + conteudo : ""}`;
+      }
     )
     .join("\n");
 

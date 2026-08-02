@@ -26,7 +26,7 @@ async function main() {
   const { data, error } = await supabase.auth.admin.generateLink({
     type: "recovery",
     email: EMAIL,
-    options: { redirectTo: "http://localhost:3000/admin/candidaturas" },
+    options: { redirectTo: "https://mosalo-auto-candidatura.netlify.app/admin/candidaturas" },
   });
   if (error) throw error;
 
@@ -51,9 +51,9 @@ Clica no link abaixo para definires a tua password:
 
 ${actionLink}
 
-Se o link não abrir correctamente, podes copiar e colar no browser. O redirect está configurado para localhost:3000, mas podes alterar o SITE_URL no Supabase para o teu domínio de produção.
+Se o link não abrir correctamente, podes copiar e colar no browser.
 
-Após definires a password, acede a /admin/candidaturas.
+Após definires a password, serás redireccionado para https://mosalo-auto-candidatura.netlify.app/admin/candidaturas.
 `,
   });
 

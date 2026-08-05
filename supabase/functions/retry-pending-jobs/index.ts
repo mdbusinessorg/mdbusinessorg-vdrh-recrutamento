@@ -7,6 +7,14 @@ const DELAY_MS = 10000;
 
 serve(async (req) => {
   try {
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    if (cronSecret) {
+      const provided = req.headers.get("x-cron-secret") || "";
+      if (provided !== cronSecret) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+      }
+    }
+
     const supabase = getSupabaseClient();
 
     const { data: settings } = await supabase
@@ -52,6 +60,12 @@ serve(async (req) => {
       const latest = latestByJob.get(j.id);
       return !latest || !FINAL_STATUSES.has(latest);
     }).slice(0, Math.min(remaining, MAX_BATCH));
+
+    // Limpa logs de erro anteriores para permitir reprocessamento
+    const pendingIds = pending.map((j) => j.id);
+    if (pendingIds.length > 0) {
+      await supabase.from("job_applications_log").delete().in("external_job_id", pendingIds).eq("status", "erro");
+    }
 
     const results: { job_id: string; status: string; error?: string }[] = [];
     for (let i = 0; i < pending.length; i++) {

@@ -2,6 +2,14 @@ import { serve } from "https://deno.land/std@0.217.0/http/server.ts";
 import { getSupabaseClient, logApplication, processJob } from "../_shared/apply-logic.ts";
 
 serve(async (req) => {
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  if (cronSecret) {
+    const provided = req.headers.get("x-cron-secret") || "";
+    if (provided !== cronSecret) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    }
+  }
+
   let jobId: string | undefined;
   let supabase: ReturnType<typeof getSupabaseClient> | undefined;
 

@@ -2,24 +2,10 @@ import { serve } from "https://deno.land/std@0.217.0/http/server.ts";
 import { getSupabaseClient, extractEmail } from "../_shared/apply-logic.ts";
 
 const BASE_URL = "https://angolaemprego.com/vagas";
-const DEFAULT_QUERIES = ["rigger", "offshore", "Banksman"];
-const MAX_JOBS_PER_RUN = 30;
-const PROCESS_DELAY_MS = 2000;
-const USER_AGENT = "Mozilla/5.0 (compatible; MosaloAutoApply/1.0)";
-
-async function triggerProcessJob(jobId: string) {
-  const baseUrl = Deno.env.get("SUPABASE_URL");
-  if (!baseUrl) return;
-  try {
-    await fetch(`${baseUrl}/functions/v1/process-new-job`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: jobId }),
-    });
-  } catch (e) {
-    console.warn(`Falha ao invocar process-new-job para ${jobId}:`, e);
-  }
-}
+const RSS_URL = "https://www.angolaemprego.com/feed";
+const DEFAULT_QUERIES = ["rigger", "offshore", "Banksman", "maintenance technician", "slinger"];
+const MAX_JOBS_PER_RUN = 50;
+const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 
 interface ListingItem {
   url: string;
@@ -79,16 +65,42 @@ function htmlToText(html: string): string {
     .trim();
 }
 
+async function fetchHtml(url: string): Promise<string> {
+  const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" } });
+  if (!res.ok) {
+    console.warn(`Falha ao aceder ${url}: ${res.status}`);
+    return "";
+  }
+  return res.text();
+}
+
+async function fetchRssLinks(): Promise<string[]> {
+  try {
+    const xml = await fetchHtml(RSS_URL);
+    if (!xml) return [];
+    const links: string[] = [];
+    const itemRe = /<item>[\s\S]*?<\/item>/gi;
+    let m;
+    while ((m = itemRe.exec(xml)) !== null) {
+      const block = m[0];
+      const linkMatch = block.match(/<link>([^<]+)<\/link>/i);
+      if (linkMatch && /\/vagas\//i.test(linkMatch[1])) {
+        links.push(linkMatch[1].trim());
+      }
+    }
+    return links;
+  } catch (e) {
+    console.warn("Falha ao ler feed RSS:", e);
+    return [];
+  }
+}
+
 async function fetchListing(query: string, page = 1): Promise<ListingItem[]> {
   const url = query
     ? `${BASE_URL}?q=${encodeURIComponent(query)}&page=${page}`
     : `${BASE_URL}?page=${page}`;
-  const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
-  if (!res.ok) {
-    console.warn(`Falha ao aceder ${url}: ${res.status}`);
-    return [];
-  }
-  const html = await res.text();
+  const html = await fetchHtml(url);
+  if (!html) return [];
   return parseListing(html);
 }
 
@@ -100,6 +112,14 @@ function getQueries(): string[] {
 
 serve(async (req) => {
   try {
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    if (cronSecret) {
+      const provided = req.headers.get("x-cron-secret") || "";
+      if (provided !== cronSecret) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+      }
+    }
+
     if (req.method !== "POST" && req.method !== "GET") {
       return new Response(JSON.stringify({ error: "Método não suportado" }), { status: 405 });
     }
@@ -121,8 +141,21 @@ serve(async (req) => {
     const seen = new Set<string>();
     const listings: ListingItem[] = [];
 
+    // RSS primeiro: captura vagas do dia antes de aparecerem nas páginas
+    try {
+      const rssLinks = await fetchRssLinks();
+      for (const url of rssLinks) {
+        if (!url || seen.has(url)) continue;
+        seen.add(url);
+        listings.push({ url, name: "" });
+        if (listings.length >= MAX_JOBS_PER_RUN) break;
+      }
+    } catch (e) {
+      console.warn("RSS ignorado:", e);
+    }
+
     for (const query of queries) {
-      for (let page = 1; page <= 2; page++) {
+      for (let page = 1; page <= 3; page++) {
         if (listings.length >= MAX_JOBS_PER_RUN) break;
         const items = await fetchListing(query, page);
         for (const item of items) {
@@ -150,13 +183,11 @@ serve(async (req) => {
           continue;
         }
 
-        const detailRes = await fetch(item.url, { headers: { "User-Agent": USER_AGENT } });
-        if (!detailRes.ok) {
-          results.push({ url: item.url, title: item.name || "", status: `erro HTTP ${detailRes.status}` });
+        const detailHtml = await fetchHtml(item.url);
+        if (!detailHtml) {
+          results.push({ url: item.url, title: item.name || "", status: "erro HTTP" });
           continue;
         }
-
-        const detailHtml = await detailRes.text();
         const job = parseJobDetail(detailHtml);
 
         if (!job) {
@@ -166,7 +197,12 @@ serve(async (req) => {
 
         const description = job.description || "";
         const pageText = htmlToText(detailHtml);
-        const contactEmail = extractEmail(description) || extractEmail(pageText);
+        let contactEmail = extractEmail(description) || extractEmail(pageText);
+        // Alguns anúncios usam mailto: no botão de candidatura
+        const applyMatch = detailHtml.match(/href=["'](mailto:[^"']+)["']/i);
+        if (!contactEmail && applyMatch) {
+          contactEmail = extractEmail(applyMatch[1].replace(/^mailto:/i, ""));
+        }
 
         const payload = {
           title: job.title || item.name || "",
@@ -186,8 +222,8 @@ serve(async (req) => {
         } else {
           insertedCount++;
           results.push({ url: item.url, title: payload.title, status: "inserido" });
-          await triggerProcessJob(inserted.id);
-          await new Promise((r) => setTimeout(r, PROCESS_DELAY_MS));
+          // O processamento da candidatura fica a cargo do retry-pending-jobs (cron/workflow)
+          // para respeitar os limites de tokens/minuto da Groq.
         }
       } catch (itemError) {
         const msg = itemError instanceof Error ? itemError.message : String(itemError);

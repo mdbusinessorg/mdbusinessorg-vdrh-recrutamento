@@ -1,6 +1,10 @@
 import { serve } from "https://deno.land/std@0.217.0/http/server.ts";
 import { getSupabaseClient, logApplication, processJob } from "../_shared/apply-logic.ts";
 
+const FINAL_STATUSES = new Set(["enviado", "sem_email", "sem_match", "duplicado"]);
+const MAX_BATCH = 10;
+const DELAY_MS = 10000;
+
 serve(async (req) => {
   try {
     const supabase = getSupabaseClient();
@@ -29,22 +33,31 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, message: "Limite diário atingido" }), { status: 200 });
     }
 
+    // Processa vagas pendentes (sem log) ou com último log em erro, excluindo estados finais.
+    const { data: jobs } = await supabase.from("external_jobs").select("id");
     const { data: logs } = await supabase
       .from("job_applications_log")
-      .select("external_job_id");
-    const processedIds = [...new Set((logs || []).map((l) => l.external_job_id).filter(Boolean))];
-    const excludeFilter = processedIds.length ? `(${processedIds.join(",")})` : "('')";
-    const { data: pending } = await supabase
-      .from("external_jobs")
-      .select("id")
-      .not("id", "in", excludeFilter)
-      .limit(remaining);
+      .select("external_job_id, status, created_at")
+      .order("created_at", { ascending: false });
+
+    const latestByJob = new Map<string, string>();
+    for (const log of logs || []) {
+      if (!log.external_job_id) continue;
+      if (!latestByJob.has(log.external_job_id)) {
+        latestByJob.set(log.external_job_id, log.status);
+      }
+    }
+
+    const pending = (jobs || []).filter((j) => {
+      const latest = latestByJob.get(j.id);
+      return !latest || !FINAL_STATUSES.has(latest);
+    }).slice(0, Math.min(remaining, MAX_BATCH));
 
     const results: { job_id: string; status: string; error?: string }[] = [];
-    for (let i = 0; i < (pending || []).length; i++) {
+    for (let i = 0; i < pending.length; i++) {
       const job = pending[i];
       if (i > 0) {
-        await new Promise((r) => setTimeout(r, 10000));
+        await new Promise((r) => setTimeout(r, DELAY_MS));
       }
       try {
         await processJob(supabase, job.id);

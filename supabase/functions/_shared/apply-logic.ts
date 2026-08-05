@@ -58,7 +58,7 @@ export interface GroqResponse {
 }
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_MODEL = "llama-3.3-70b-versatile";
+const DEFAULT_MODEL = "llama-3.1-8b-instant";
 
 export function getSupabaseClient(): SupabaseClient {
   const url = Deno.env.get("SUPABASE_URL");
@@ -261,12 +261,16 @@ export async function callGroq(
           model,
           messages,
           temperature: 0.4,
-          max_tokens: 1200,
+          max_tokens: 800,
           response_format: { type: "json_object" },
         }),
       });
       if (!resp.ok) {
         const text = await resp.text();
+        const isDailyLimit = text.includes("tokens per day") || text.includes("TPD");
+        if (isDailyLimit) {
+          throw new Error(`Groq daily token limit reached: ${text}`);
+        }
         if ((resp.status === 429 || resp.status >= 500) && attempt < retries) {
           const delay = 2 ** attempt * 1000;
           console.warn(`Groq ${resp.status}, retry ${attempt + 1}/${retries} após ${delay}ms`);
@@ -298,12 +302,11 @@ export function buildPrompt(
   profile: CandidateProfile,
   cvs: CandidateCV[]
 ): any[] {
+  const cargoApresentar = determineCargoApresentar(job);
+
   const cvsBlock = cvs
     .map(
-      (cv) => {
-        const conteudo = (cv.conteudo_texto || "").slice(0, 1200);
-        return `- ID: ${cv.id}\n  Título: ${cv.titulo}\n  Cargo-alvo: ${cv.cargo_alvo}\n  Skills cobertas: ${(cv.skills_cobertas || []).join(", ")}${conteudo ? "\n  Conteúdo resumido: " + conteudo : ""}`;
-      }
+      (cv) => `- ID: ${cv.id}\n  Título: ${cv.titulo}\n  Cargo-alvo: ${cv.cargo_alvo}\n  Skills cobertas: ${(cv.skills_cobertas || []).join(", ")}`
     )
     .join("\n");
 
@@ -312,17 +315,18 @@ O teu trabalho é analisar uma vaga de emprego, compará-la com o perfil do cand
 
 REGRAS FUNDAMENTAIS:
 1. NUNCA inventes experiências, certificações, formações ou referências que não estejam no perfil/cvs fornecidos.
-2. Escolhe o CV cujo cargo-alvo e skills cobertas batam mais com a vaga.
+2. Escolhe o CV cujo cargo-alvo e skills cobertas batem mais com a vaga.
 3. O score_match deve reflectir a verdadeira adequação (0 a 100).
-4. O corpo do email deve ter 150-250 palavras, profissional, em português.
-5. Cita 3 a 5 skills/certificações do perfil que batam com a vaga.
-6. Menciona a formação no INP e a experiência na SLB (ESSO/NGC) apenas quando GENUINAMENTE relevantes para a vaga.
-7. Devolve APENAS um objecto JSON válido com as chaves: score_match (número), cv_recomendado_id (uuid), skills_destacadas (array de strings), assunto_email (string), corpo_email (string).`;
+4. O corpo do email deve ter 150-250 palavras, profissional, em português (ou em inglês se a vaga for claramente em inglês).
+5. O CARGO a apresentar no email é obrigatoriamente "${cargoApresentar}". Usa ESTE cargo no assunto e no início do corpo do email (ex.: "Candidatura ao cargo de ${cargoApresentar}"). NUNCA uses simplesmente a palavra "rigger" sozinha.
+6. Cita 3 a 5 skills/certificações do perfil que batam com a vaga.
+7. Menciona a formação no INP e a experiência na SLB (ESSO/NGC) apenas quando GENUINAMENTE relevantes para a vaga.
+8. Devolve APENAS um objecto JSON válido com as chaves: score_match (número), cv_recomendado_id (uuid), skills_destacadas (array de strings), assunto_email (string), corpo_email (string).`;
 
   const user = `PERFIL DO CANDIDATO:
 Nome: ${profile.full_name}
-Bio/percurso: ${profile.bio_longa}
-Formação: ${profile.formacao || "N/A"}
+Bio/percurso: ${(profile.bio_longa || "").slice(0, 500)}
+Formação: ${(profile.formacao || "N/A").slice(0, 200)}
 Certificações: ${(profile.certificacoes || []).join(", ")}
 Skills: ${(profile.skills || []).join(", ")}
 
@@ -330,12 +334,15 @@ CVS DISPONÍVEIS:
 ${cvsBlock || "Nenhum CV disponível."}
 
 VAGA:
-Título: ${job.title || "N/A"}
-Empresa: ${job.company || "N/A"}
-Localização: ${job.location || "N/A"}
-Descrição: ${job.description || "N/A"}
-Requisitos: ${job.requirements || "N/A"}
-Contacto: ${job.contact_info || "N/A"}`;
+Título: ${(job.title || "N/A").slice(0, 120)}
+Empresa: ${(job.company || "N/A").slice(0, 80)}
+Localização: ${(job.location || "N/A").slice(0, 80)}
+Descrição: ${(job.description || "").slice(0, 1000)}
+Requisitos: ${(job.requirements || "").slice(0, 300)}
+Contacto: ${job.contact_info || "N/A"}
+
+INSTRUÇÃO OBRIGATÓRIA:
+Apresenta-te no email como: "${cargoApresentar}". O assunto deve ser "Candidatura ao cargo de ${cargoApresentar}". Nunca uses simplesmente a palavra "rigger" sozinha.`;
 
   return [
     { role: "system", content: system },
@@ -347,6 +354,38 @@ function coerceScore(score: any): number {
   const n = Number(score);
   if (Number.isNaN(n)) return 0;
   return Math.min(100, Math.max(0, n));
+}
+
+const RELEVANT_KEYWORDS = [
+  "rigger", "rigging", "banksman", "slinger", "slinging", "maintenance", "technician",
+  "mecânico", "mecanico", "electromecânico", "electromecanico", "mecânica", "mecanica",
+  "offshore", "onshore", "oil", "gas", "petróleo", "petroleo", "plataforma", "platform",
+  "crane", "lifting", "guindaste", "grua", "industrial", "hse", "qhse", "safety",
+  "operator", "operador", "production", "produção", "producao", "field", "subsea",
+  "instalações", "instalacoes", "instalação", "instalacao", "construção", "construcao",
+  "welding", "welder", "soldador", "electricista", "electrica", "eléctrica", "eletricista",
+];
+
+function isRelevantJob(job: ExternalJob): boolean {
+  const text = `${job.title || ""} ${job.description || ""} ${job.requirements || ""} ${job.company || ""}`
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return RELEVANT_KEYWORDS.some((kw) => text.includes(kw.toLowerCase()));
+}
+
+export function determineCargoApresentar(job: ExternalJob): string {
+  const text = `${job.title || ""} ${job.description || ""} ${job.requirements || ""}`
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  const isMaintenance = text.includes("maintenance technician") || text.includes("tecnico de manutencao") || text.includes("técnico de manutenção");
+  const isBanksman = text.includes("banksman");
+  const isSlinger = text.includes("slinger");
+  if (isMaintenance) return "maintenance technician/rigger";
+  if (isBanksman || isSlinger) return "banksman & slinger";
+  if (text.includes("rigger")) return "maintenance technician/rigger";
+  return "maintenance technician/rigger";
 }
 
 function pickBestCV(cvs: CandidateCV[], cvId: string | null): CandidateCV | null {
@@ -477,6 +516,18 @@ export async function processJob(supabase: SupabaseClient, jobId: string) {
       status: "sem_email",
       email_destino: null,
       score_match: null,
+    });
+    return;
+  }
+
+  if (!isRelevantJob(job)) {
+    console.log(`Vaga ${jobId} não é relevante para o perfil do Matias.`);
+    await logApplication(supabase, {
+      external_job_id: jobId,
+      status: "sem_match",
+      email_destino: emailDestino,
+      score_match: 0,
+      skills_destacadas: [],
     });
     return;
   }

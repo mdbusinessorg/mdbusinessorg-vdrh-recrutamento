@@ -2,8 +2,8 @@ import { serve } from "https://deno.land/std@0.217.0/http/server.ts";
 import { getSupabaseClient, logApplication, processJob } from "../_shared/apply-logic.ts";
 
 const FINAL_STATUSES = new Set(["enviado", "sem_email", "sem_match", "duplicado"]);
-const MAX_BATCH = 10;
-const DELAY_MS = 10000;
+const MAX_BATCH = 8;
+const DELAY_MS = 15000;
 
 serve(async (req) => {
   try {

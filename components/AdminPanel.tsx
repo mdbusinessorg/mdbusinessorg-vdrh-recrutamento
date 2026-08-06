@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { saveProfile, saveSettings } from "@/app/admin/candidaturas/actions";
 import { SubmitButton } from "./SubmitButton";
@@ -107,13 +108,17 @@ export function AdminPanel({
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-10">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-brand-600">Painel de Candidatura Automática</h1>
           <p className="text-slate-500 text-sm">{user.email}</p>
         </div>
-        <div className="text-sm text-slate-500">
-          Módulo {settingsForm.ativo ? <span className="text-green-600 font-medium">ACTIVO</span> : <span className="text-red-600 font-medium">INACTIVO</span>}
+        <div className="flex items-center gap-4">
+          <Link href="/monitor" className="text-sm px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition">Central de Comando</Link>
+          <Link href="/vagas" className="text-sm px-3 py-1.5 rounded-lg bg-brand-600 text-white hover:bg-brand-500 transition">Vagas</Link>
+          <span className="text-sm text-slate-500">
+            Módulo {settingsForm.ativo ? <span className="text-green-600 font-medium">ACTIVO</span> : <span className="text-red-600 font-medium">INACTIVO</span>}
+          </span>
         </div>
       </header>
 

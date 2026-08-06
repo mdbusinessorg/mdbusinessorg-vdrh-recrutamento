@@ -68,9 +68,14 @@ export default async function VagasPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-brand-600">Vagas Extraídas</h1>
-          <Link href="/admin/candidaturas" className="text-sm text-brand-600 hover:underline">
-            Ir para o painel admin
-          </Link>
+          <div className="flex gap-3">
+            <Link href="/monitor" className="text-sm px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition">
+              Central de Comando
+            </Link>
+            <Link href="/admin/candidaturas" className="text-sm px-3 py-1.5 rounded-lg bg-brand-600 text-white hover:bg-brand-500 transition">
+              Painel admin
+            </Link>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow p-6 mb-6">

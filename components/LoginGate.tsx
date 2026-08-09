@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase";
 
-const MATIAS_EMAIL = (process.env.NEXT_PUBLIC_MATIAS_EMAIL || "").trim().toLowerCase();
+const ALLOWED_EMAILS = (process.env.NEXT_PUBLIC_ALLOWED_EMAILS || process.env.NEXT_PUBLIC_MATIAS_EMAIL || "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
 
 export function LoginGate() {
   const [email, setEmail] = useState("");
@@ -16,8 +19,8 @@ export function LoginGate() {
     e.preventDefault();
     setMessage("");
 
-    if (MATIAS_EMAIL && email.trim().toLowerCase() !== MATIAS_EMAIL) {
-      setMessage("Acesso reservado ao Matias. Usa o email autorizado.");
+    if (ALLOWED_EMAILS.length > 0 && !ALLOWED_EMAILS.includes(email.trim().toLowerCase())) {
+      setMessage("Acesso reservado. Usa o email autorizado.");
       return;
     }
 
@@ -47,7 +50,7 @@ export function LoginGate() {
   return (
     <div className="max-w-md w-full bg-white rounded-2xl shadow p-8">
       <h1 className="text-2xl font-bold mb-2 text-brand-600">Acesso Privado</h1>
-      <p className="text-sm text-slate-500 mb-6">Painel de Candidatura Automática — apenas o Matias.</p>
+      <p className="text-sm text-slate-500 mb-6">Painel de Candidatura Automática — acesso autorizado.</p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-1">Email</label>

@@ -11,12 +11,14 @@ export async function saveProfile(formData: FormData) {
   const id = formData.get("id") as string | null;
   const payload = {
     user_id: user.id,
+    email: user.email,
     full_name: String(formData.get("full_name") || ""),
     bio_longa: String(formData.get("bio_longa") || ""),
     formacao: String(formData.get("formacao") || ""),
     certificacoes: JSON.parse(String(formData.get("certificacoes") || "[]")),
     skills: JSON.parse(String(formData.get("skills") || "[]")),
     referencias: JSON.parse(String(formData.get("referencias") || "[]")),
+    ativo: true,
     updated_at: new Date().toISOString(),
   };
 

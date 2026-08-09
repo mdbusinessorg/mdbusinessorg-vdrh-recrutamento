@@ -145,6 +145,7 @@ export async function POST(req: NextRequest) {
 
       const profilePayload: any = {
         user_id: user!.id,
+        email: user!.email,
         full_name: parsed.full_name || "",
         bio_longa: parsed.bio_longa || "",
         formacao: parsed.formacao || "",

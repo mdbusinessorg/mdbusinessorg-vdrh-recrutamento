@@ -51,7 +51,15 @@ export async function getAuthenticatedUser(): Promise<User | null> {
   return user;
 }
 
+function getAllowedEmails(): string[] {
+  const raw = process.env.ALLOWED_EMAILS || process.env.MATIAS_EMAIL || "";
+  return raw
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 export async function isAdmin(user?: User | null): Promise<boolean> {
   if (!user?.email) return false;
-  return user.email.trim().toLowerCase() === (process.env.MATIAS_EMAIL || "").trim().toLowerCase();
+  return getAllowedEmails().includes(user.email.trim().toLowerCase());
 }

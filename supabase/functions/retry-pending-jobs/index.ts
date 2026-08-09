@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.217.0/http/server.ts";
-import { getSupabaseClient, logApplication, processJob } from "../_shared/apply-logic.ts";
+import { getSupabaseClient, logApplication, processJob, getActiveProfiles, checkDailyLimit } from "../_shared/apply-logic.ts";
 
 const FINAL_STATUSES = new Set(["enviado", "sem_email", "sem_match", "duplicado"]);
 const MAX_BATCH = 8;
@@ -19,7 +19,7 @@ serve(async (req) => {
 
     const { data: settings } = await supabase
       .from("auto_apply_settings")
-      .select("limite_diario, ativo")
+      .select("limite_diario, ativo, score_minimo")
       .order("id", { ascending: false })
       .limit(1)
       .single();
@@ -28,24 +28,29 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, message: "Módulo desactivado" }), { status: 200 });
     }
 
-    const today = new Date().toISOString().split("T")[0];
-    const { count: sentToday } = await supabase
-      .from("job_applications_log")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "enviado")
-      .gte("created_at", `${today}T00:00:00Z`)
-      .lt("created_at", `${today}T23:59:59Z`);
-
-    const remaining = Math.max(0, settings.limite_diario - (sentToday || 0));
-    if (remaining <= 0) {
-      return new Response(JSON.stringify({ ok: true, message: "Limite diário atingido" }), { status: 200 });
+    const profiles = await getActiveProfiles(supabase);
+    if (profiles.length === 0) {
+      return new Response(JSON.stringify({ ok: true, message: "Nenhum candidato activo" }), { status: 200 });
     }
 
-    // Processa vagas pendentes (sem log) ou com último log em erro, excluindo estados finais.
+    let anyHasRemaining = false;
+    for (const p of profiles) {
+      const limit = p.limite_diario ?? settings.limite_diario;
+      const atLimit = await checkDailyLimit(supabase, p.user_id, limit);
+      if (!atLimit) {
+        anyHasRemaining = true;
+        break;
+      }
+    }
+
+    if (!anyHasRemaining) {
+      return new Response(JSON.stringify({ ok: true, message: "Todos os candidatos atingiram o limite diário" }), { status: 200 });
+    }
+
     const { data: jobs } = await supabase.from("external_jobs").select("id");
     const { data: logs } = await supabase
       .from("job_applications_log")
-      .select("external_job_id, status, created_at")
+      .select("external_job_id, status, user_id, created_at")
       .order("created_at", { ascending: false });
 
     const latestByJob = new Map<string, string>();
@@ -59,9 +64,8 @@ serve(async (req) => {
     const pending = (jobs || []).filter((j) => {
       const latest = latestByJob.get(j.id);
       return !latest || !FINAL_STATUSES.has(latest);
-    }).slice(0, Math.min(remaining, MAX_BATCH));
+    }).slice(0, MAX_BATCH);
 
-    // Limpa logs de erro anteriores para permitir reprocessamento
     const pendingIds = pending.map((j) => j.id);
     if (pendingIds.length > 0) {
       await supabase.from("job_applications_log").delete().in("external_job_id", pendingIds).eq("status", "erro");

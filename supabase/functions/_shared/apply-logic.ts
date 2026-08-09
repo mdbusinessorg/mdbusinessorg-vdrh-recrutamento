@@ -8,11 +8,19 @@ export interface CandidateProfile {
   id: string;
   user_id: string;
   full_name: string;
+  email?: string;
   bio_longa: string;
   formacao?: string;
   certificacoes?: string[];
   skills?: string[];
   referencias?: any[];
+  ativo?: boolean;
+  smtp_host?: string;
+  smtp_port?: number;
+  smtp_username?: string;
+  smtp_password?: string;
+  email_remetente?: string;
+  limite_diario?: number;
 }
 
 export interface CandidateCV {
@@ -58,7 +66,7 @@ export interface GroqResponse {
 }
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_MODEL = "llama-3.1-8b-instant";
+const DEFAULT_MODEL = "llama-3.3-70b-versatile";
 
 export function getSupabaseClient(): SupabaseClient {
   const url = Deno.env.get("SUPABASE_URL");
@@ -157,10 +165,20 @@ export async function getSettings(supabase: SupabaseClient): Promise<Settings | 
   return data as Settings;
 }
 
-export async function getProfile(supabase: SupabaseClient): Promise<CandidateProfile | null> {
+export async function getActiveProfiles(supabase: SupabaseClient): Promise<CandidateProfile[]> {
+  const { data, error } = await supabase.from("candidate_profile").select("*").eq("ativo", true);
+  if (error) {
+    console.error("Erro ao obter perfis:", error);
+    return [];
+  }
+  return (data as CandidateProfile[]) || [];
+}
+
+export async function getProfileByUserId(supabase: SupabaseClient, userId: string): Promise<CandidateProfile | null> {
   const { data, error } = await supabase
     .from("candidate_profile")
     .select("*")
+    .eq("user_id", userId)
     .order("updated_at", { ascending: false })
     .limit(1)
     .single();
@@ -171,11 +189,12 @@ export async function getProfile(supabase: SupabaseClient): Promise<CandidatePro
   return data as CandidateProfile;
 }
 
-export async function getActiveCVs(supabase: SupabaseClient): Promise<CandidateCV[]> {
+export async function getActiveCVs(supabase: SupabaseClient, userId: string): Promise<CandidateCV[]> {
   const { data, error } = await supabase
     .from("candidate_cvs")
     .select("*")
     .eq("ativo", true)
+    .eq("user_id", userId)
     .order("created_at", { ascending: true });
   if (error) {
     console.error("Erro ao obter CVs:", error);
@@ -197,6 +216,7 @@ export async function logApplication(
   supabase: SupabaseClient,
   payload: {
     external_job_id: string;
+    user_id?: string | null;
     status: string;
     cv_usado_id?: string | null;
     email_destino?: string | null;
@@ -213,11 +233,16 @@ export async function logApplication(
   }
 }
 
-export async function checkDuplicate(supabase: SupabaseClient, jobId: string): Promise<boolean> {
+export async function checkDuplicate(
+  supabase: SupabaseClient,
+  jobId: string,
+  userId: string
+): Promise<boolean> {
   const { count, error } = await supabase
     .from("job_applications_log")
     .select("id", { count: "exact", head: true })
-    .eq("external_job_id", jobId);
+    .eq("external_job_id", jobId)
+    .eq("user_id", userId);
   if (error) {
     console.error("Erro ao verificar duplicado:", error);
     return false;
@@ -225,12 +250,17 @@ export async function checkDuplicate(supabase: SupabaseClient, jobId: string): P
   return (count || 0) > 0;
 }
 
-export async function checkDailyLimit(supabase: SupabaseClient, limit: number): Promise<boolean> {
+export async function checkDailyLimit(
+  supabase: SupabaseClient,
+  userId: string,
+  limit: number
+): Promise<boolean> {
   const today = new Date().toISOString().split("T")[0];
   const { count, error } = await supabase
     .from("job_applications_log")
     .select("id", { count: "exact", head: true })
     .eq("status", "enviado")
+    .eq("user_id", userId)
     .gte("created_at", `${today}T00:00:00Z`)
     .lt("created_at", `${today}T23:59:59Z`);
   if (error) {
@@ -476,7 +506,10 @@ export function buildEmail(
   const abertura = idioma === "en" ? `I am writing to apply for the ${cargo} position.` : `Apresento a minha candidatura ao cargo de ${cargo}.`;
   const fecho = idioma === "en" ? "I am available for an interview and have attached my CV for review." : "Coloco-me à disposição para uma entrevista e envio o CV em anexo para análise.";
   const despedida = idioma === "en" ? "Best regards," : "Atentamente,";
-  const assunto = idioma === "en" ? `Application for ${cargo} - Matias Domingos` : `Candidatura ao cargo de ${cargo} - Matias Domingos`;
+  const assunto = idioma === "en" ? `Application for ${cargo} - ${profile.full_name}` : `Candidatura ao cargo de ${cargo} - ${profile.full_name}`;
+
+  const fullName = profile.full_name || "Candidato";
+  const contactBlock = profile.email ? `${fullName} | ${profile.email}` : fullName;
 
   const skillsBlock = selectedSkills.slice(0, 5).map((s) => `• ${s}`).join("\n");
 
@@ -492,7 +525,7 @@ ${skillsBlock}
 ${fecho}
 
 ${despedida}
-Matias Domingos | Luanda, Angola | +244 926 115 429 | matiasdomingos158@gmail.com | linkedin.com/in/matias-domingos-oilgas`;
+${contactBlock}`;
 
   return { assunto_email: assunto, corpo_email: corpo };
 }
@@ -538,15 +571,16 @@ export async function sendEmailWithRetry(
   subject: string,
   body: string,
   attachment: { filename: string; bytes: Uint8Array } | null,
+  profile: CandidateProfile,
   maxAttempts = 3
 ): Promise<void> {
-  const password = Deno.env.get("GMAIL_APP_PASSWORD");
-  const sender = Deno.env.get("EMAIL_REMETENTE") || "suporte@mosalo.eu.cc";
-  const host = Deno.env.get("SMTP_HOST") || "smtp.gmail.com";
-  const port = Number(Deno.env.get("SMTP_PORT") || 465);
-  const username = Deno.env.get("SMTP_USERNAME") || sender;
+  const password = profile.smtp_password || Deno.env.get("GMAIL_APP_PASSWORD");
+  const sender = profile.email_remetente || Deno.env.get("EMAIL_REMETENTE") || "suporte@mosalo.eu.cc";
+  const host = profile.smtp_host || Deno.env.get("SMTP_HOST") || "smtp.gmail.com";
+  const port = Number(profile.smtp_port || Deno.env.get("SMTP_PORT") || 465);
+  const username = profile.smtp_username || Deno.env.get("SMTP_USERNAME") || sender;
 
-  if (!password) throw new Error("GMAIL_APP_PASSWORD em falta");
+  if (!password) throw new Error("GMAIL_APP_PASSWORD em falta para o candidato " + profile.full_name);
 
   let lastError: Error | null = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -588,40 +622,43 @@ export async function sendEmailWithRetry(
   throw lastError || new Error("Falha ao enviar email após retries");
 }
 
-export async function processJob(supabase: SupabaseClient, jobId: string) {
-  const settings = await getSettings(supabase);
-  if (!settings) throw new Error("Configurações do módulo não encontradas");
-
-  if (!settings.ativo) {
-    console.log(`Módulo desactivado. Vaga ${jobId} ignorada.`);
+async function processCandidateJob(
+  supabase: SupabaseClient,
+  job: ExternalJob,
+  profile: CandidateProfile,
+  settings: Settings,
+  groqKey: string
+) {
+  if (profile.ativo === false) {
+    console.log(`Perfil ${profile.user_id} inactivo. Ignorado.`);
     return;
   }
 
-  if (await checkDuplicate(supabase, jobId)) {
-    console.log(`Vaga ${jobId} já processada.`);
+  if (await checkDuplicate(supabase, job.id, profile.user_id)) {
+    console.log(`Vaga ${job.id} já processada para ${profile.full_name}.`);
     await logApplication(supabase, {
-      external_job_id: jobId,
+      external_job_id: job.id,
+      user_id: profile.user_id,
       status: "duplicado",
       score_match: null,
     });
     return;
   }
 
-  if (await checkDailyLimit(supabase, settings.limite_diario)) {
-    console.log(`Limite diário atingido. Vaga ${jobId} ficará pendente.`);
+  const dailyLimit = profile.limite_diario ?? settings.limite_diario;
+  if (await checkDailyLimit(supabase, profile.user_id, dailyLimit)) {
+    console.log(`Limite diário atingido para ${profile.full_name}.`);
     return;
   }
-
-  const job = await getJob(supabase, jobId);
-  if (!job) throw new Error(`Vaga ${jobId} não encontrada`);
 
   const searchText = [job.description, job.contact_info, job.requirements, job.title, job.company].filter(Boolean).join("\n");
   const emailDestino = extractEmail(searchText);
 
   if (!emailDestino) {
-    console.log(`Vaga ${jobId} sem email de contacto.`);
+    console.log(`Vaga ${job.id} sem email de contacto para ${profile.full_name}.`);
     await logApplication(supabase, {
-      external_job_id: jobId,
+      external_job_id: job.id,
+      user_id: profile.user_id,
       status: "sem_email",
       email_destino: null,
       score_match: null,
@@ -630,9 +667,10 @@ export async function processJob(supabase: SupabaseClient, jobId: string) {
   }
 
   if (!isRelevantJob(job)) {
-    console.log(`Vaga ${jobId} não é relevante para o perfil do Matias.`);
+    console.log(`Vaga ${job.id} não é relevante para ${profile.full_name}.`);
     await logApplication(supabase, {
-      external_job_id: jobId,
+      external_job_id: job.id,
+      user_id: profile.user_id,
       status: "sem_match",
       email_destino: emailDestino,
       score_match: 0,
@@ -641,26 +679,20 @@ export async function processJob(supabase: SupabaseClient, jobId: string) {
     return;
   }
 
-  const profile = await getProfile(supabase);
-  if (!profile) throw new Error("Perfil do candidato não encontrado");
-
-  const cvs = await getActiveCVs(supabase);
-  if (cvs.length === 0) throw new Error("Nenhum CV activo");
-
-  const groqKey = Deno.env.get("GROQ_API_KEY");
-  if (!groqKey) throw new Error("GROQ_API_KEY em falta");
+  const cvs = await getActiveCVs(supabase, profile.user_id);
+  if (cvs.length === 0) {
+    console.log(`Candidato ${profile.full_name} não tem CV activo. Vaga ${job.id} ignorada.`);
+    return;
+  }
 
   const idioma = determineLanguage(job);
-  const cargoApresentar = determineCargoApresentar(job);
   const skillPool = pickRelevantSkillPool(job, profile);
   const messages = buildPrompt(job, profile, skillPool);
   const groqResult = await callGroq(groqKey, DEFAULT_MODEL, messages, 250);
   if (!groqResult) throw new Error("Resposta inválida da Groq");
 
   const score = coerceScore(groqResult.score_match);
-  const cv = pickBestCV(cvs, groqResult.cv_recomendado_id);
 
-  // Apenas aceita skills que constem no pool para evitar alucinações
   let selectedSkills = (groqResult.skills_destacadas || [])
     .filter((s) => typeof s === "string" && s.trim().length > 0)
     .filter((s) => skillPool.some((p) => p.toLowerCase().trim() === s.toLowerCase().trim()))
@@ -670,11 +702,13 @@ export async function processJob(supabase: SupabaseClient, jobId: string) {
   }
 
   const { assunto_email, corpo_email } = buildEmail(job, profile, cvs, selectedSkills, idioma);
+  const cv = pickBestCV(cvs, groqResult.cv_recomendado_id);
 
   if (score < settings.score_minimo) {
-    console.log(`Vaga ${jobId} com score ${score} abaixo do mínimo ${settings.score_minimo}.`);
+    console.log(`Vaga ${job.id} com score ${score} abaixo do mínimo ${settings.score_minimo} para ${profile.full_name}.`);
     await logApplication(supabase, {
-      external_job_id: jobId,
+      external_job_id: job.id,
+      user_id: profile.user_id,
       status: "sem_match",
       cv_usado_id: cv?.id || null,
       email_destino: emailDestino,
@@ -696,11 +730,13 @@ export async function processJob(supabase: SupabaseClient, jobId: string) {
     assunto_email,
     corpo_email,
     { filename: `${cv.titulo}.pdf`.replace(/\s+/g, "_"), bytes: pdfBytes },
+    profile,
     3
   );
 
   await logApplication(supabase, {
-    external_job_id: jobId,
+    external_job_id: job.id,
+    user_id: profile.user_id,
     status: "enviado",
     cv_usado_id: cv.id,
     email_destino: emailDestino,
@@ -710,5 +746,47 @@ export async function processJob(supabase: SupabaseClient, jobId: string) {
     skills_destacadas: selectedSkills,
   });
 
-  console.log(`Candidatura enviada para ${emailDestino} (score: ${score}, cargo: ${cargoApresentar})`);
+  console.log(`Candidatura de ${profile.full_name} enviada para ${emailDestino} (score: ${score})`);
+}
+
+export async function processJob(supabase: SupabaseClient, jobId: string) {
+  const settings = await getSettings(supabase);
+  if (!settings) throw new Error("Configurações do módulo não encontradas");
+
+  if (!settings.ativo) {
+    console.log(`Módulo desactivado. Vaga ${jobId} ignorada.`);
+    return;
+  }
+
+  const job = await getJob(supabase, jobId);
+  if (!job) throw new Error(`Vaga ${jobId} não encontrada`);
+
+  const groqKey = Deno.env.get("GROQ_API_KEY");
+  if (!groqKey) throw new Error("GROQ_API_KEY em falta");
+
+  const profiles = await getActiveProfiles(supabase);
+  if (profiles.length === 0) throw new Error("Nenhum candidato activo");
+
+  for (let i = 0; i < profiles.length; i++) {
+    const profile = profiles[i];
+    if (i > 0) {
+      await new Promise((r) => setTimeout(r, 10000));
+    }
+    try {
+      await processCandidateJob(supabase, job, profile, settings, groqKey);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`Erro ao processar vaga ${jobId} para ${profile.full_name}:`, msg);
+      try {
+        await logApplication(supabase, {
+          external_job_id: jobId,
+          user_id: profile.user_id,
+          status: "erro",
+          erro_detalhe: msg,
+        });
+      } catch (logErr) {
+        console.error("Falha ao registar erro:", logErr);
+      }
+    }
+  }
 }

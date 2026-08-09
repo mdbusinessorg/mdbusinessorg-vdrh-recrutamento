@@ -43,7 +43,12 @@ export async function GET() {
   );
 
   const recent = (recentJobsRes.data || []).map((job: any) => {
-    const log = job.job_applications_log;
+    const logs = Array.isArray(job.job_applications_log)
+      ? job.job_applications_log.filter(Boolean)
+      : job.job_applications_log
+      ? [job.job_applications_log]
+      : [];
+    const log = logs[0];
     const status = log?.status || "pendente";
     return {
       id: job.id,

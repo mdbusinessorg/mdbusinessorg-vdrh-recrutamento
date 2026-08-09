@@ -1,8 +1,16 @@
 import { serve } from "https://deno.land/std@0.217.0/http/server.ts";
-import { getSupabaseClient, logApplication, processJob, getActiveProfiles, checkDailyLimit } from "../_shared/apply-logic.ts";
+import {
+  getSupabaseClient,
+  logApplication,
+  processCandidateJob,
+  getActiveProfiles,
+  getProfileByUserId,
+  getSettings,
+  getJob,
+  checkDailyLimit,
+} from "../_shared/apply-logic.ts";
 
-const FINAL_STATUSES = new Set(["enviado", "sem_email", "sem_match", "duplicado"]);
-const MAX_BATCH = 8;
+const DEFAULT_MAX_BATCH = 8;
 const DEFAULT_DELAY_MS = 15000;
 
 serve(async (req) => {
@@ -16,9 +24,13 @@ serve(async (req) => {
     }
 
     let manual = false;
+    let userId: string | undefined;
+    let maxBatch = DEFAULT_MAX_BATCH;
     try {
       const body = await req.json();
       manual = !!body.manual;
+      userId = body.user_id;
+      if (body.max_batch && typeof body.max_batch === "number") maxBatch = body.max_batch;
     } catch {
       // body pode estar vazio
     }
@@ -26,82 +38,85 @@ serve(async (req) => {
     const delayMs = manual ? 0 : DEFAULT_DELAY_MS;
     const supabase = getSupabaseClient();
 
-    const { data: settings } = await supabase
-      .from("auto_apply_settings")
-      .select("limite_diario, ativo, score_minimo")
-      .order("id", { ascending: false })
-      .limit(1)
-      .single();
-
+    const settings = await getSettings(supabase);
     if (!settings || !settings.ativo) {
       return new Response(JSON.stringify({ ok: true, message: "Módulo desactivado" }), { status: 200 });
     }
 
-    const profiles = await getActiveProfiles(supabase);
+
+
+    let profiles = userId ? [await getProfileByUserId(supabase, userId)] : await getActiveProfiles(supabase);
+    profiles = profiles.filter((p): p is NonNullable<typeof p> => !!p && p.ativo !== false);
+
     if (profiles.length === 0) {
       return new Response(JSON.stringify({ ok: true, message: "Nenhum candidato activo" }), { status: 200 });
     }
 
-    let anyHasRemaining = false;
-    for (const p of profiles) {
-      const limit = p.limite_diario ?? settings.limite_diario;
-      const atLimit = await checkDailyLimit(supabase, p.user_id, limit);
-      if (!atLimit) {
-        anyHasRemaining = true;
-        break;
+    // remove profiles already at daily limit
+    for (let i = profiles.length - 1; i >= 0; i--) {
+      const limit = profiles[i].limite_diario ?? settings.limite_diario;
+      if (await checkDailyLimit(supabase, profiles[i].user_id, limit)) {
+        console.log(`Limite diário atingido para ${profiles[i].full_name}.`);
+        profiles.splice(i, 1);
       }
     }
 
-    if (!anyHasRemaining) {
+    if (profiles.length === 0) {
       return new Response(JSON.stringify({ ok: true, message: "Todos os candidatos atingiram o limite diário" }), { status: 200 });
     }
 
     const { data: jobs } = await supabase.from("external_jobs").select("id");
-    const { data: logs } = await supabase
-      .from("job_applications_log")
-      .select("external_job_id, status, user_id, created_at")
-      .order("created_at", { ascending: false });
+    const allJobIds = (jobs || []).map((j) => j.id);
 
-    const latestByJob = new Map<string, string>();
-    for (const log of logs || []) {
-      if (!log.external_job_id) continue;
-      if (!latestByJob.has(log.external_job_id)) {
-        latestByJob.set(log.external_job_id, log.status);
-      }
+    // per-profile pending jobs
+    const profileJobs: { profile: typeof profiles[0]; pendingIds: string[] }[] = [];
+    for (const profile of profiles) {
+      const { data: logs } = await supabase
+        .from("job_applications_log")
+        .select("external_job_id, status")
+        .eq("user_id", profile.user_id);
+      const processed = new Set((logs || []).map((l) => l.external_job_id));
+      const pendingIds = allJobIds.filter((id) => !processed.has(id)).slice(0, maxBatch);
+      profileJobs.push({ profile, pendingIds });
     }
 
-    const pending = (jobs || []).filter((j) => {
-      const latest = latestByJob.get(j.id);
-      return !latest || !FINAL_STATUSES.has(latest);
-    }).slice(0, MAX_BATCH);
+    const results: { user_id: string; job_id: string; status: string; score?: number | null; error?: string }[] = [];
+    let jobCount = 0;
 
-    const pendingIds = pending.map((j) => j.id);
-    if (pendingIds.length > 0) {
-      await supabase.from("job_applications_log").delete().in("external_job_id", pendingIds).eq("status", "erro");
-    }
-
-    const results: { job_id: string; status: string; error?: string }[] = [];
-    for (let i = 0; i < pending.length; i++) {
-      const job = pending[i];
-      if (i > 0 && delayMs > 0) {
-        await new Promise((r) => setTimeout(r, delayMs));
-      }
-      try {
-        await processJob(supabase, job.id);
-        results.push({ job_id: job.id, status: "ok" });
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        console.error(`Retry falhou para ${job.id}:`, msg);
-        try {
-          await logApplication(supabase, {
-            external_job_id: job.id,
-            status: "erro",
-            erro_detalhe: msg,
-          });
-        } catch (logErr) {
-          console.error("Falha ao registar erro no retry:", logErr);
+    for (const { profile, pendingIds } of profileJobs) {
+      const limit = profile.limite_diario ?? settings.limite_diario;
+      for (let i = 0; i < pendingIds.length; i++) {
+        if (await checkDailyLimit(supabase, profile.user_id, limit)) {
+          console.log(`Limite diário atingido para ${profile.full_name} durante o processamento.`);
+          break;
         }
-        results.push({ job_id: job.id, status: "error", error: msg });
+
+        if (jobCount > 0 && delayMs > 0) {
+          await new Promise((r) => setTimeout(r, delayMs));
+        }
+        jobCount++;
+
+        const job = await getJob(supabase, pendingIds[i]);
+        if (!job) continue;
+
+        try {
+          await processCandidateJob(supabase, job, profile, settings);
+          results.push({ user_id: profile.user_id, job_id: pendingIds[i], status: "ok" });
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.error(`Retry falhou para ${pendingIds[i]} / ${profile.user_id}:`, msg);
+          try {
+            await logApplication(supabase, {
+              external_job_id: pendingIds[i],
+              user_id: profile.user_id,
+              status: "erro",
+              erro_detalhe: msg,
+            });
+          } catch (logErr) {
+            console.error("Falha ao registar erro no retry:", logErr);
+          }
+          results.push({ user_id: profile.user_id, job_id: pendingIds[i], status: "error", error: msg });
+        }
       }
     }
 

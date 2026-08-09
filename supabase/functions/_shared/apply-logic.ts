@@ -270,12 +270,21 @@ export async function checkDailyLimit(
   return (count || 0) >= limit;
 }
 
-export async function callGroq(
+export function getGroqKeys(): string[] {
+  const keys = [
+    Deno.env.get("GROQ_API_KEY"),
+    Deno.env.get("GROQ_API_KEY_2"),
+    Deno.env.get("GROQ_API_KEY_3"),
+  ].filter(Boolean) as string[];
+  return keys;
+}
+
+async function tryGroqKey(
   apiKey: string,
   model: string,
   messages: any[],
-  maxTokens = 700,
-  retries = 3
+  maxTokens: number,
+  retries: number
 ): Promise<GroqResponse | null> {
   let lastError: Error | null = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -296,11 +305,19 @@ export async function callGroq(
       });
       if (!resp.ok) {
         const text = await resp.text();
-        const isDailyLimit = text.includes("tokens per day") || text.includes("TPD");
-        if (isDailyLimit) {
-          throw new Error(`Groq daily token limit reached: ${text}`);
+        const isRateLimit = text.toLowerCase().includes("rate limit") || resp.status === 429;
+        const isRateLimitFinal = isRateLimit && attempt >= retries;
+        if (isRateLimit) {
+          if (isRateLimitFinal) {
+            throw new Error(`Groq rate limit: ${text}`);
+          }
+          const delay = 2 ** attempt * 1000;
+          console.warn(`Groq rate limit (${apiKey.slice(-6)}), retry ${attempt + 1}/${retries} após ${delay}ms`);
+          await new Promise((r) => setTimeout(r, delay));
+          lastError = new Error(`Groq rate limit: ${text}`);
+          continue;
         }
-        if ((resp.status === 429 || resp.status >= 500) && attempt < retries) {
+        if (resp.status >= 500 && attempt < retries) {
           const delay = 2 ** attempt * 1000;
           console.warn(`Groq ${resp.status}, retry ${attempt + 1}/${retries} após ${delay}ms`);
           await new Promise((r) => setTimeout(r, delay));
@@ -316,6 +333,9 @@ export async function callGroq(
       return parsed as GroqResponse;
     } catch (e) {
       lastError = e instanceof Error ? e : new Error(String(e));
+      if (lastError.message.includes("rate limit")) {
+        throw lastError;
+      }
       if (attempt < retries) {
         const delay = 2 ** attempt * 1000;
         console.warn(`Groq erro, retry ${attempt + 1}/${retries} após ${delay}ms: ${lastError.message}`);
@@ -324,6 +344,33 @@ export async function callGroq(
     }
   }
   throw lastError || new Error("Falha ao contactar a Groq");
+}
+
+export async function callGroq(
+  apiKeyOrKeys: string | string[],
+  model: string,
+  messages: any[],
+  maxTokens = 700,
+  retries = 2
+): Promise<GroqResponse | null> {
+  const keys = Array.isArray(apiKeyOrKeys) ? apiKeyOrKeys : [apiKeyOrKeys];
+  let lastError: Error | null = null;
+  for (const key of keys) {
+    try {
+      return await tryGroqKey(key, model, messages, maxTokens, retries);
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+      const shouldTryNext =
+        lastError.message.includes("rate limit") ||
+        lastError.message.includes("tokens per day") ||
+        lastError.message.includes("TPD");
+      if (!shouldTryNext) {
+        throw lastError;
+      }
+      console.warn(`Groq chave falhou (${key.slice(-6)}): ${lastError.message}`);
+    }
+  }
+  throw lastError || new Error("Todas as chaves Groq falharam");
 }
 
 function coerceScore(score: any): number {
@@ -354,7 +401,7 @@ function normalizeText(text: string): string {
   return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-export function determineCargoApresentar(job: ExternalJob): string {
+export function determineCargoApresentar(job: ExternalJob, defaultCargo = "Professional"): string {
   const title = normalizeText(job.title || "");
   const text = normalizeText(`${job.title || ""} ${job.description || ""} ${job.requirements || ""}`);
 
@@ -382,7 +429,7 @@ export function determineCargoApresentar(job: ExternalJob): string {
   if (text.includes("well completion") || text.includes("completion") || text.includes("scssv") || text.includes("fiv") || text.includes("psv")) {
     return "Well Completion & Electro-Mechanical Maintenance Technician";
   }
-  return "Maintenance Technician / Rigger";
+  return defaultCargo;
 }
 
 const PT_MARKERS = [
@@ -515,7 +562,8 @@ export function buildEmail(
   selectedSkills: string[],
   idioma: "pt" | "en"
 ): { assunto_email: string; corpo_email: string } {
-  const cargo = determineCargoApresentar(job);
+  const defaultCargo = (cvs[0]?.cargo_alvo || "Professional").trim();
+  const cargo = determineCargoApresentar(job, defaultCargo || "Professional");
   const isMatias = profile.email === "matiasdomingos158@gmail.com";
   const experience = isMatias
     ? pickExperience(job, idioma)
@@ -642,12 +690,11 @@ export async function sendEmailWithRetry(
   throw lastError || new Error("Falha ao enviar email após retries");
 }
 
-async function processCandidateJob(
+export async function processCandidateJob(
   supabase: SupabaseClient,
   job: ExternalJob,
   profile: CandidateProfile,
-  settings: Settings,
-  groqKey: string
+  settings: Settings
 ) {
   if (profile.ativo === false) {
     console.log(`Perfil ${profile.user_id} inactivo. Ignorado.`);
@@ -708,22 +755,59 @@ async function processCandidateJob(
   const idioma = determineLanguage(job);
   const skillPool = pickRelevantSkillPool(job, profile);
   const profileWithCargo = { ...profile, cargo_alvo: cvs[0]?.cargo_alvo || "" };
-  const messages = buildPrompt(job, profileWithCargo, skillPool);
-  const groqResult = await callGroq(groqKey, DEFAULT_MODEL, messages, 250);
-  if (!groqResult) throw new Error("Resposta inválida da Groq");
 
-  const score = coerceScore(groqResult.score_match);
+  let score = 0;
+  let selectedSkills: string[] = [];
+  let cvId: string | null = null;
 
-  let selectedSkills = (groqResult.skills_destacadas || [])
-    .filter((s) => typeof s === "string" && s.trim().length > 0)
-    .filter((s) => skillPool.some((p) => p.toLowerCase().trim() === s.toLowerCase().trim()))
-    .slice(0, 5);
+  try {
+    const messages = buildPrompt(job, profileWithCargo, skillPool);
+    const groqResult = await callGroq(getGroqKeys(), DEFAULT_MODEL, messages, 250);
+    if (!groqResult) throw new Error("Resposta inválida da Groq");
+
+    score = coerceScore(groqResult.score_match);
+    selectedSkills = (groqResult.skills_destacadas || [])
+      .filter((s) => typeof s === "string" && s.trim().length > 0)
+      .filter((s) => skillPool.some((p) => p.toLowerCase().trim() === s.toLowerCase().trim()))
+      .slice(0, 5);
+    cvId = groqResult.cv_recomendado_id || null;
+  } catch (groqErr) {
+    const errMsg = groqErr instanceof Error ? groqErr.message : String(groqErr);
+    console.warn(`Groq falhou para vaga ${job.id} (${profile.full_name}), usando fallback: ${errMsg}`);
+
+    // Fallback baseado em palavras-chave: só envia se houver correspondência real com o perfil
+    const jobText = normalizeText(`${job.title || ""} ${job.description || ""} ${job.requirements || ""}`);
+    const combinedSkills = [...(profile.skills || []), ...(profile.certificacoes || [])];
+    const matchedSkills = combinedSkills.filter((s) => {
+      const normalized = normalizeText(s);
+      const parts = normalized.split(/[^\w\/+&-]+/).filter((p) => p.length > 2);
+      return parts.some((p) => jobText.includes(p));
+    });
+
+    if (!isRelevantJob(job) || matchedSkills.length < 2) {
+      console.log(`Vaga ${job.id} não tem correspondência suficiente com ${profile.full_name}; fallback sem match.`);
+      await logApplication(supabase, {
+        external_job_id: job.id,
+        user_id: profile.user_id,
+        status: "sem_match",
+        email_destino: emailDestino,
+        score_match: 0,
+        skills_destacadas: [],
+      });
+      return;
+    }
+
+    score = Math.max(settings.score_minimo, 60);
+    selectedSkills = matchedSkills.slice(0, 5);
+    cvId = null;
+  }
+
   if (selectedSkills.length < 3) {
     selectedSkills = skillPool.slice(0, 5);
   }
 
   const { assunto_email, corpo_email } = buildEmail(job, profile, cvs, selectedSkills, idioma);
-  const cv = pickBestCV(cvs, groqResult.cv_recomendado_id);
+  const cv = pickBestCV(cvs, cvId);
 
   if (score < settings.score_minimo) {
     console.log(`Vaga ${job.id} com score ${score} abaixo do mínimo ${settings.score_minimo} para ${profile.full_name}.`);
@@ -782,9 +866,6 @@ export async function processJob(supabase: SupabaseClient, jobId: string) {
   const job = await getJob(supabase, jobId);
   if (!job) throw new Error(`Vaga ${jobId} não encontrada`);
 
-  const groqKey = Deno.env.get("GROQ_API_KEY");
-  if (!groqKey) throw new Error("GROQ_API_KEY em falta");
-
   const profiles = await getActiveProfiles(supabase);
   if (profiles.length === 0) throw new Error("Nenhum candidato activo");
 
@@ -794,7 +875,7 @@ export async function processJob(supabase: SupabaseClient, jobId: string) {
       await new Promise((r) => setTimeout(r, 10000));
     }
     try {
-      await processCandidateJob(supabase, job, profile, settings, groqKey);
+      await processCandidateJob(supabase, job, profile, settings);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error(`Erro ao processar vaga ${jobId} para ${profile.full_name}:`, msg);

@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { RunBotButton } from "./RunBotButton";
+import { LogoutButton } from "./LogoutButton";
 
 interface MonitorData {
   active: boolean;
@@ -113,7 +116,7 @@ export function RobotMonitor() {
                 Central de Comando
               </h1>
               <p className="text-slate-400 mt-2">Sistema de Candidatura Automática</p>
-              <div className="mt-4 flex items-center justify-center md:justify-start gap-3">
+              <div className="mt-4 flex flex-wrap items-center justify-center md:justify-start gap-3">
                 <span
                   className={`inline-flex h-3 w-3 rounded-full animate-ping ${
                     data.active ? "bg-green-400" : "bg-red-400"
@@ -124,6 +127,9 @@ export function RobotMonitor() {
                 </span>
                 <span className="text-slate-500">|</span>
                 <span className="text-slate-400 text-sm">Actualizado: {now.toLocaleTimeString("pt-PT")}</span>
+                <RunBotButton className="bg-cyan-600 hover:bg-cyan-500" />
+                <Link href="/admin/candidaturas" className="text-sm px-3 py-1.5 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition">Admin</Link>
+                <LogoutButton className="border-slate-600 text-slate-200 hover:bg-slate-800" />
               </div>
             </div>
           </div>

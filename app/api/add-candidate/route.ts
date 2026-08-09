@@ -1,0 +1,191 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createServiceRoleClient, getAuthenticatedUser, isAdmin } from "@/lib/supabase-server";
+import pdfParse from "pdf-parse";
+
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+
+interface CVParseResult {
+  full_name?: string;
+  bio_longa?: string;
+  formacao?: string;
+  certificacoes?: string[];
+  skills?: string[];
+  experiencia?: string;
+  titulo?: string;
+  cargo_alvo?: string;
+  skills_cobertas?: string[];
+}
+
+async function parseCVWithGroq(text: string, apiKey: string): Promise<CVParseResult | null> {
+  const system = `Extrai informações estruturadas de um CV em português ou inglês.
+Devolve APENAS um objecto JSON válido com as chaves:
+- full_name (string)
+- bio_longa (string, resumo profissional em 3-5 frases)
+- formacao (string)
+- certificacoes (array de strings)
+- skills (array de strings)
+- experiencia (string)
+- titulo (string, sugestão de título para o CV)
+- cargo_alvo (string, cargo principal do candidato)
+- skills_cobertas (array de strings, skills técnicas cobertas pelo CV)
+
+Não inventes dados que não estejam no CV. Se não encontrares, usa arrays vazios e strings vazias.`;
+
+  const resp = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: `CV EM TEXTO:\n${text.slice(0, 6000)}` },
+      ],
+      temperature: 0.3,
+      max_tokens: 1000,
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!resp.ok) {
+    console.error("Groq add-candidate parse error:", await resp.text());
+    return null;
+  }
+  const json = await resp.json();
+  const content = json.choices?.[0]?.message?.content;
+  if (!content) return null;
+  try {
+    return JSON.parse(content) as CVParseResult;
+  } catch {
+    return null;
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const user = await getAuthenticatedUser();
+  if (!(await isAdmin(user))) {
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  }
+
+  try {
+    const formData = await req.formData();
+    const email = String(formData.get("email") || "").trim().toLowerCase();
+    const password = String(formData.get("password") || "");
+    const smtpPassword = String(formData.get("smtp_password") || "");
+    const fullNameInput = String(formData.get("full_name") || "").trim();
+    const emailRemetente = String(formData.get("email_remetente") || "").trim().toLowerCase() || email;
+    const file = formData.get("file") as File | null;
+
+    if (!email || !password || !smtpPassword) {
+      return NextResponse.json({ error: "Email, password e App Password são obrigatórios" }, { status: 400 });
+    }
+    if (!file || file.size === 0) {
+      return NextResponse.json({ error: "CV em falta" }, { status: 400 });
+    }
+    if (file.type !== "application/pdf") {
+      return NextResponse.json({ error: "Só PDF" }, { status: 400 });
+    }
+
+    const supabase = createServiceRoleClient();
+
+    // 1. Criar user Supabase Auth
+    const { data: userData, error: userError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (userError) {
+      return NextResponse.json({ error: userError.message }, { status: 500 });
+    }
+    if (!userData.user) {
+      return NextResponse.json({ error: "Erro ao criar utilizador" }, { status: 500 });
+    }
+    const newUserId = userData.user.id;
+
+    // 2. Upload CV
+    const arrayBuffer = await file.arrayBuffer();
+    let cvText = "";
+    let parsed: CVParseResult | null = null;
+    try {
+      const buffer = Buffer.from(arrayBuffer);
+      const pdfResult = await pdfParse(buffer);
+      cvText = pdfResult.text || "";
+      const apiKey = process.env.GROQ_API_KEY;
+      if (apiKey && cvText.trim().length > 50) {
+        parsed = await parseCVWithGroq(cvText, apiKey);
+      }
+    } catch (e) {
+      console.warn("Falha ao fazer parse do PDF:", e);
+    }
+
+    try {
+      await supabase.storage.createBucket("cvs", { public: false });
+    } catch {
+      // ignore
+    }
+
+    const storagePath = `${newUserId}/${Date.now()}_${file.name}`;
+    const { error: uploadError } = await supabase.storage.from("cvs").upload(storagePath, file, {
+      upsert: true,
+      contentType: "application/pdf",
+    });
+    if (uploadError) {
+      // remove user if upload fails
+      await supabase.auth.admin.deleteUser(newUserId);
+      return NextResponse.json({ error: uploadError.message }, { status: 500 });
+    }
+
+    // 3. Perfil
+    const fullName = fullNameInput || parsed?.full_name || email.split("@")[0];
+    const { error: profileError } = await supabase.from("candidate_profile").insert({
+      user_id: newUserId,
+      email,
+      full_name: fullName,
+      bio_longa: parsed?.bio_longa || "",
+      formacao: parsed?.formacao || "",
+      certificacoes: parsed?.certificacoes || [],
+      skills: parsed?.skills || [],
+      referencias: [],
+      ativo: true,
+      smtp_host: "smtp.gmail.com",
+      smtp_port: 465,
+      smtp_username: email,
+      smtp_password: smtpPassword,
+      email_remetente: emailRemetente,
+      limite_diario: 15,
+    });
+    if (profileError) {
+      console.error("Erro ao criar perfil:", profileError);
+      // continue
+    }
+
+    // 4. CV
+    const { data: cv, error: cvError } = await supabase.from("candidate_cvs").insert({
+      user_id: newUserId,
+      titulo: parsed?.titulo || "CV",
+      cargo_alvo: parsed?.cargo_alvo || "",
+      arquivo_url: storagePath,
+      skills_cobertas: parsed?.skills_cobertas || [],
+      conteudo_texto: cvText.slice(0, 20000),
+      ativo: true,
+    }).select("*").single();
+    if (cvError) {
+      console.error("Erro ao criar CV:", cvError);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      email,
+      user_id: newUserId,
+      password,
+      cv,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("add-candidate error:", e);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}

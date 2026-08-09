@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { saveProfile, saveSettings } from "@/app/admin/candidaturas/actions";
 import { SubmitButton } from "./SubmitButton";
+import { LogoutButton } from "./LogoutButton";
+import { RunBotButton } from "./RunBotButton";
+import { AddCandidateForm } from "./AddCandidateForm";
 
 function toCSV(arr: string[] = []) {
   return arr.join(", ");
@@ -113,14 +116,21 @@ export function AdminPanel({
           <h1 className="text-3xl font-bold text-brand-600">Painel de Candidatura Automática</h1>
           <p className="text-slate-500 text-sm">{user.email}</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <RunBotButton />
           <Link href="/monitor" className="text-sm px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition">Central de Comando</Link>
           <Link href="/vagas" className="text-sm px-3 py-1.5 rounded-lg bg-brand-600 text-white hover:bg-brand-500 transition">Vagas</Link>
           <span className="text-sm text-slate-500">
             Módulo {settingsForm.ativo ? <span className="text-green-600 font-medium">ACTIVO</span> : <span className="text-red-600 font-medium">INACTIVO</span>}
           </span>
+          <LogoutButton />
         </div>
       </header>
+
+      <section className="bg-white rounded-2xl shadow p-6">
+        <h2 className="text-xl font-semibold mb-4">Adicionar novo candidato</h2>
+        <AddCandidateForm />
+      </section>
 
       <section className="bg-white rounded-2xl shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Perfil do Candidato</h2>

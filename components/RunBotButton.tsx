@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClient } from "@/lib/supabase";
 
 export function RunBotButton({ className = "" }: { className?: string }) {
   const [loading, setLoading] = useState(false);
@@ -11,7 +12,13 @@ export function RunBotButton({ className = "" }: { className?: string }) {
     setLoading(true);
     setMessage("");
     try {
-      const res = await fetch("/api/run-bot", { method: "POST" });
+      const supabase = createClient();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const res = await fetch("/api/run-bot", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const data = await res.json();
       if (res.ok) {
         setMessage(`Bot executado. ${data.message || ""}`);

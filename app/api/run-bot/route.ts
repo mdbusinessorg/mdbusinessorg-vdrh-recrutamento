@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceRoleClient, getAuthenticatedUser, isAdmin } from "@/lib/supabase-server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 export const revalidate = 0;
 
@@ -33,9 +34,27 @@ async function invokeFunction(name: string, secret: string, body?: object) {
   return { status: res.status, ok: res.ok, body: json };
 }
 
-export async function POST() {
+async function getUserFromRequest(request: Request) {
+  const cookieUser = await getAuthenticatedUser();
+  if (cookieUser) return cookieUser;
+
+  const authHeader = request.headers.get("Authorization") || "";
+  const token = authHeader.replace("Bearer ", "").trim();
+  if (!token) return null;
+
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) return null;
+  return data.user;
+}
+
+export async function POST(request: Request) {
   try {
-    const user = await getAuthenticatedUser();
+    const user = await getUserFromRequest(request);
     if (!user || !(await isAdmin(user))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

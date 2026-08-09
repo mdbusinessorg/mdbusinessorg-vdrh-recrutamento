@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient, getAuthenticatedUser, isAdmin } from "@/lib/supabase-server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import pdfParse from "pdf-parse";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -64,8 +65,26 @@ Não inventes dados que não estejam no CV. Se não encontrares, usa arrays vazi
   }
 }
 
+async function getUserFromRequest(request: Request) {
+  const cookieUser = await getAuthenticatedUser();
+  if (cookieUser) return cookieUser;
+
+  const authHeader = request.headers.get("Authorization") || "";
+  const token = authHeader.replace("Bearer ", "").trim();
+  if (!token) return null;
+
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) return null;
+  return data.user;
+}
+
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser();
+  const user = await getUserFromRequest(req);
   if (!(await isAdmin(user))) {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
   }

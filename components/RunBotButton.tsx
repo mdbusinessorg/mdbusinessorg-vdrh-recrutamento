@@ -21,7 +21,7 @@ export function RunBotButton({ className = "" }: { className?: string }) {
       });
       const data = await res.json();
       if (res.ok) {
-        setMessage(`Bot executado. ${data.message || ""}`);
+        setMessage(data.message || "Bot executado. Verifica /monitor ou /vagas.");
       } else {
         setMessage(`Erro: ${data.error || "Falha ao correr o bot"}`);
       }

@@ -355,7 +355,23 @@ function normalizeText(text: string): string {
 }
 
 export function determineCargoApresentar(job: ExternalJob): string {
+  const title = normalizeText(job.title || "");
   const text = normalizeText(`${job.title || ""} ${job.description || ""} ${job.requirements || ""}`);
+
+  if (title.includes("banksman") || title.includes("slinger")) return "Banksman & Slinger";
+  if (title.includes("project management") || title.includes("pmp") || title.includes("power bi") || title.includes("ms project")) {
+    return "Project Management Intern / Technician";
+  }
+  if (title.includes("hse") || title.includes("safety") || title.includes("quality") || title.includes("civil engineer") || title.includes("construction engineer") || title.includes("site supervisor") || title.includes("ohs")) {
+    return "HSE / Quality Control / Civil Engineer";
+  }
+  if (title.includes("well completion") || title.includes("completion") || title.includes("scssv") || title.includes("fiv") || title.includes("psv")) {
+    return "Well Completion & Electro-Mechanical Maintenance Technician";
+  }
+  if (title.includes("maintenance") || title.includes("rigger") || title.includes("rigging") || title.includes("mecanico") || title.includes("mecânico") || title.includes("electromecanico")) {
+    return "Maintenance Technician / Rigger";
+  }
+
   if (text.includes("banksman") || text.includes("slinger")) return "Banksman & Slinger";
   if (text.includes("project management") || text.includes("pmp") || text.includes("power bi") || text.includes("ms project")) {
     return "Project Management Intern / Technician";
@@ -470,6 +486,7 @@ REGRAS:
 
   const user = `CANDIDATO:
 Nome: ${profile.full_name}
+Cargo alvo: ${(profile as any).cargo_alvo || "N/A"}
 Percurso: ${(profile.bio_longa || "").slice(0, 700)}
 Formação: ${(profile.formacao || "N/A").slice(0, 300)}
 Certificações: ${(profile.certificacoes || []).slice(0, 15).join(", ")}
@@ -483,7 +500,7 @@ Empresa: ${(job.company || "N/A").slice(0, 80)}
 Descrição: ${(job.description || "").slice(0, 900)}
 Requisitos: ${(job.requirements || "").slice(0, 400)}
 
-O cargo a apresentar é "${cargoApresentar}". Devolve JSON com score_match e skills_destacadas.`;
+O cargo a apresentar é "${cargoApresentar}". Avalia o score_match considerando o cargo alvo do candidato, as skills/certificações e a descrição da vaga. Devolve JSON com score_match e skills_destacadas.`;
 
   return [
     { role: "system", content: system },
@@ -499,7 +516,10 @@ export function buildEmail(
   idioma: "pt" | "en"
 ): { assunto_email: string; corpo_email: string } {
   const cargo = determineCargoApresentar(job);
-  const experience = pickExperience(job, idioma);
+  const isMatias = profile.email === "matiasdomingos158@gmail.com";
+  const experience = isMatias
+    ? pickExperience(job, idioma)
+    : (profile.bio_longa || "").slice(0, 400);
   const cv = cvs[0];
 
   const saudacao = idioma === "en" ? "Dear Hiring Manager," : "Exmo.(a) Recrutador(a),";
@@ -687,7 +707,8 @@ async function processCandidateJob(
 
   const idioma = determineLanguage(job);
   const skillPool = pickRelevantSkillPool(job, profile);
-  const messages = buildPrompt(job, profile, skillPool);
+  const profileWithCargo = { ...profile, cargo_alvo: cvs[0]?.cargo_alvo || "" };
+  const messages = buildPrompt(job, profileWithCargo, skillPool);
   const groqResult = await callGroq(groqKey, DEFAULT_MODEL, messages, 250);
   if (!groqResult) throw new Error("Resposta inválida da Groq");
 

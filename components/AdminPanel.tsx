@@ -123,7 +123,7 @@ export function AdminPanel({
       </header>
 
       <section className="bg-white rounded-2xl shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Perfil do Matias</h2>
+        <h2 className="text-xl font-semibold mb-4">Perfil do Candidato</h2>
         <form action={handleProfile} className="space-y-4">
           <input type="hidden" name="id" value={profileForm.id} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

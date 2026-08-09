@@ -20,6 +20,8 @@ function toArray(str: string) {
     .filter(Boolean);
 }
 
+const MATIAS_EMAIL = (process.env.NEXT_PUBLIC_MATIAS_EMAIL || "matiasdomingos158@gmail.com").toLowerCase();
+
 export function AdminPanel({
   user,
   profile,
@@ -37,6 +39,7 @@ export function AdminPanel({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isOwner = user?.email?.toLowerCase() === MATIAS_EMAIL;
 
   const [profileForm, setProfileForm] = useState({
     id: profile?.id || "",
@@ -127,10 +130,12 @@ export function AdminPanel({
         </div>
       </header>
 
-      <section className="bg-white rounded-2xl shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Adicionar novo candidato</h2>
-        <AddCandidateForm />
-      </section>
+      {isOwner && (
+        <section className="bg-white rounded-2xl shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Adicionar novo candidato</h2>
+          <AddCandidateForm />
+        </section>
+      )}
 
       <section className="bg-white rounded-2xl shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Perfil do Candidato</h2>

@@ -63,3 +63,16 @@ export async function isAdmin(user?: User | null): Promise<boolean> {
   if (!user?.email) return false;
   return getAllowedEmails().includes(user.email.trim().toLowerCase());
 }
+
+function getSuperAdminEmails(): string[] {
+  const raw = process.env.SUPER_ADMIN_EMAILS || process.env.MATIAS_EMAIL || "matiasdomingos158@gmail.com";
+  return raw
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export async function isSuperAdmin(user?: User | null): Promise<boolean> {
+  if (!user?.email) return false;
+  return getSuperAdminEmails().includes(user.email.trim().toLowerCase());
+}

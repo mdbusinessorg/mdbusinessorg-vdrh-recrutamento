@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceRoleClient, getAuthenticatedUser, isAdmin } from "@/lib/supabase-server";
+import { createServiceRoleClient, getAuthenticatedUser, isSuperAdmin } from "@/lib/supabase-server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import pdfParse from "pdf-parse";
 
@@ -85,8 +85,8 @@ async function getUserFromRequest(request: Request) {
 
 export async function POST(req: NextRequest) {
   const user = await getUserFromRequest(req);
-  if (!(await isAdmin(user))) {
-    return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  if (!(await isSuperAdmin(user))) {
+    return NextResponse.json({ error: "Acesso reservado ao administrador principal" }, { status: 403 });
   }
 
   try {

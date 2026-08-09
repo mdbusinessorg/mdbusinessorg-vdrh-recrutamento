@@ -3,7 +3,7 @@ import { getSupabaseClient, logApplication, processJob, getActiveProfiles, check
 
 const FINAL_STATUSES = new Set(["enviado", "sem_email", "sem_match", "duplicado"]);
 const MAX_BATCH = 8;
-const DELAY_MS = 15000;
+const DEFAULT_DELAY_MS = 15000;
 
 serve(async (req) => {
   try {
@@ -15,6 +15,15 @@ serve(async (req) => {
       }
     }
 
+    let manual = false;
+    try {
+      const body = await req.json();
+      manual = !!body.manual;
+    } catch {
+      // body pode estar vazio
+    }
+
+    const delayMs = manual ? 0 : DEFAULT_DELAY_MS;
     const supabase = getSupabaseClient();
 
     const { data: settings } = await supabase
@@ -74,8 +83,8 @@ serve(async (req) => {
     const results: { job_id: string; status: string; error?: string }[] = [];
     for (let i = 0; i < pending.length; i++) {
       const job = pending[i];
-      if (i > 0) {
-        await new Promise((r) => setTimeout(r, DELAY_MS));
+      if (i > 0 && delayMs > 0) {
+        await new Promise((r) => setTimeout(r, delayMs));
       }
       try {
         await processJob(supabase, job.id);

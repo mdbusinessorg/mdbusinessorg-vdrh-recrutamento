@@ -4,7 +4,8 @@ import { getSupabaseClient, extractEmail } from "../_shared/apply-logic.ts";
 const BASE_URL = "https://angolaemprego.com/vagas";
 const RSS_URL = "https://www.angolaemprego.com/feed";
 const DEFAULT_QUERIES = ["rigger", "offshore", "Banksman", "maintenance technician", "slinger"];
-const MAX_JOBS_PER_RUN = 50;
+const DEFAULT_MAX_JOBS_PER_RUN = 50;
+const MANUAL_MAX_JOBS_PER_RUN = 10;
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 
 interface ListingItem {
@@ -123,6 +124,16 @@ serve(async (req) => {
     if (req.method !== "POST" && req.method !== "GET") {
       return new Response(JSON.stringify({ error: "Método não suportado" }), { status: 405 });
     }
+
+    let manual = false;
+    try {
+      const body = await req.json();
+      manual = !!body.manual;
+    } catch {
+      // body pode estar vazio
+    }
+
+    const MAX_JOBS_PER_RUN = manual ? MANUAL_MAX_JOBS_PER_RUN : DEFAULT_MAX_JOBS_PER_RUN;
 
     const supabase = getSupabaseClient();
 

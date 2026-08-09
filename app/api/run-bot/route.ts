@@ -13,7 +13,7 @@ async function getCronSecret(): Promise<string | null> {
   return data?.value || null;
 }
 
-async function invokeFunction(name: string, secret: string) {
+async function invokeFunction(name: string, secret: string, body?: object) {
   const url = `https://noywnuafpxvxvmfkjtbh.supabase.co/functions/v1/${name}`;
   const res = await fetch(url, {
     method: "POST",
@@ -21,7 +21,7 @@ async function invokeFunction(name: string, secret: string) {
       "Content-Type": "application/json",
       "x-cron-secret": secret,
     },
-    body: JSON.stringify({}),
+    body: JSON.stringify(body || {}),
   });
   const text = await res.text();
   let json: any = null;
@@ -45,8 +45,8 @@ export async function POST() {
       return NextResponse.json({ error: "CRON_SECRET não configurado" }, { status: 500 });
     }
 
-    const scrape = await invokeFunction("scrape-jobs", secret);
-    const retry = await invokeFunction("retry-pending-jobs", secret);
+    const scrape = await invokeFunction("scrape-jobs", secret, { manual: true });
+    const retry = await invokeFunction("retry-pending-jobs", secret, { manual: true });
 
     return NextResponse.json({
       ok: true,

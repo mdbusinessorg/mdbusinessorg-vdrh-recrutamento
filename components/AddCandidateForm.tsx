@@ -57,6 +57,10 @@ export function AddCandidateForm() {
           <input name="full_name" type="text" className="w-full rounded-lg border border-slate-300 px-3 py-2" />
         </div>
         <div>
+          <label className="block text-sm font-medium mb-1">Cargo alvo (opcional)</label>
+          <input name="cargo_alvo" type="text" placeholder="ex: HSE Supervisor / Civil Engineer" className="w-full rounded-lg border border-slate-300 px-3 py-2" />
+        </div>
+        <div>
           <label className="block text-sm font-medium mb-1">CV (PDF)</label>
           <input name="file" type="file" accept="application/pdf" required className="w-full text-sm" />
         </div>

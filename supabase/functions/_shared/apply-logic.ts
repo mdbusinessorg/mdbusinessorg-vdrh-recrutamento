@@ -10,6 +10,7 @@ export interface CandidateProfile {
   full_name: string;
   email?: string;
   bio_longa: string;
+  cargo_alvo?: string;
   formacao?: string;
   certificacoes?: string[];
   skills?: string[];
@@ -70,8 +71,21 @@ const DEFAULT_MODEL = "llama-3.3-70b-versatile";
 
 export function getSupabaseClient(): SupabaseClient {
   const url = Deno.env.get("SUPABASE_URL");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !serviceKey) throw new Error("SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY em falta");
+  if (!url) throw new Error("SUPABASE_URL em falta");
+
+  let serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!serviceKey) {
+    const secretKeysRaw = Deno.env.get("SUPABASE_SECRET_KEYS");
+    if (secretKeysRaw) {
+      try {
+        const secretKeys = JSON.parse(secretKeysRaw);
+        serviceKey = secretKeys["default"] || secretKeys["service_role"] || Object.values(secretKeys)[0];
+      } catch {
+        // ignore
+      }
+    }
+  }
+  if (!serviceKey) throw new Error("Chave de serviço Supabase não encontrada");
   return createClient(url, serviceKey, { auth: { persistSession: false } });
 }
 
@@ -402,6 +416,11 @@ function normalizeText(text: string): string {
 }
 
 export function determineCargoApresentar(job: ExternalJob, defaultCargo = "Professional"): string {
+  const cleanDefault = (defaultCargo || "Professional").trim();
+  if (cleanDefault && cleanDefault.toLowerCase() !== "professional") {
+    return cleanDefault;
+  }
+
   const title = normalizeText(job.title || "");
   const text = normalizeText(`${job.title || ""} ${job.description || ""} ${job.requirements || ""}`);
 
@@ -429,7 +448,7 @@ export function determineCargoApresentar(job: ExternalJob, defaultCargo = "Profe
   if (text.includes("well completion") || text.includes("completion") || text.includes("scssv") || text.includes("fiv") || text.includes("psv")) {
     return "Well Completion & Electro-Mechanical Maintenance Technician";
   }
-  return defaultCargo;
+  return "Professional";
 }
 
 const PT_MARKERS = [
@@ -472,8 +491,8 @@ function scoreSkill(job: ExternalJob, skill: string, cargo: string): number {
   return matches;
 }
 
-function pickRelevantSkillPool(job: ExternalJob, profile: CandidateProfile): string[] {
-  const cargo = determineCargoApresentar(job);
+function pickRelevantSkillPool(job: ExternalJob, profile: CandidateProfile, defaultCargo?: string): string[] {
+  const cargo = determineCargoApresentar(job, defaultCargo || "Professional");
   const combined = [...(profile.skills || []), ...(profile.certificacoes || [])];
   const scored = combined
     .filter((s) => s && s.trim().length > 1)
@@ -509,20 +528,22 @@ const EXPERIENCE_SENTENCES: Record<string, Record<string, string>> = {
   },
 };
 
-function pickExperience(job: ExternalJob, idioma: "pt" | "en"): string {
+function pickExperience(job: ExternalJob, idioma: "pt" | "en", defaultCargo = ""): string {
   const text = normalizeText(`${job.title || ""} ${job.description || ""} ${job.requirements || ""}`);
   const pool = EXPERIENCE_SENTENCES[idioma];
-  const cargo = determineCargoApresentar(job);
+  const cargoNorm = normalizeText(defaultCargo || "");
+  const cargo = (defaultCargo || "").trim() || determineCargoApresentar(job);
 
-  if (cargo === "Banksman & Slinger" || text.includes("banksman") || text.includes("slinger")) return pool.D;
-  if (cargo === "Project Management Intern / Technician" || text.includes("project management") || text.includes("pmp") || text.includes("power bi") || text.includes("ms project") || text.includes("chevron") || text.includes("mafumeira") || text.includes("planeamento")) return pool.C;
-  if (text.includes("cimertex") || text.includes("heavy equipment") || text.includes("mining") || text.includes("bulldozer") || text.includes("catoca") || text.includes("kaxepa") || text.includes("industrial generator")) return pool.B;
-  if (text.includes("well completion") || text.includes("scssv") || text.includes("fiv") || text.includes("psv") || text.includes("packers") || text.includes("tubing hangers") || text.includes("wireline") || text.includes("subsea") || text.includes("rigger") || text.includes("rigging") || text.includes("lifting")) return pool.A;
+  if (cargo === "Banksman & Slinger" || cargoNorm.includes("banksman") || cargoNorm.includes("slinger") || text.includes("banksman") || text.includes("slinger")) return pool.D;
+  if (cargo === "Project Management Intern / Technician" || cargoNorm.includes("project management") || cargoNorm.includes("pmp") || cargoNorm.includes("power bi") || cargoNorm.includes("ms project") || text.includes("project management") || text.includes("pmp") || text.includes("power bi") || text.includes("ms project") || text.includes("chevron") || text.includes("mafumeira") || text.includes("planeamento")) return pool.C;
+  if (cargoNorm.includes("cimertex") || text.includes("cimertex") || text.includes("heavy equipment") || text.includes("mining") || text.includes("bulldozer") || text.includes("catoca") || text.includes("kaxepa") || text.includes("industrial generator")) return pool.B;
+  if (cargoNorm.includes("well completion") || cargoNorm.includes("scssv") || cargoNorm.includes("fiv") || cargoNorm.includes("psv") || text.includes("well completion") || text.includes("scssv") || text.includes("fiv") || text.includes("psv") || text.includes("packers") || text.includes("tubing hangers") || text.includes("wireline") || text.includes("subsea") || text.includes("rigger") || text.includes("rigging") || text.includes("lifting")) return pool.A;
   return pool.A;
 }
 
 export function buildPrompt(job: ExternalJob, profile: CandidateProfile, skillPool: string[]): any[] {
-  const cargoApresentar = determineCargoApresentar(job);
+  const defaultCargo = (profile.cargo_alvo || "").trim() || "Professional";
+  const cargoApresentar = determineCargoApresentar(job, defaultCargo);
 
   const system = `És um avaliador de compatibilidade entre um CV e uma vaga de emprego.
 REGRAS:
@@ -533,7 +554,7 @@ REGRAS:
 
   const user = `CANDIDATO:
 Nome: ${profile.full_name}
-Cargo alvo: ${(profile as any).cargo_alvo || "N/A"}
+Cargo alvo: ${profile.cargo_alvo || "N/A"}
 Percurso: ${(profile.bio_longa || "").slice(0, 700)}
 Formação: ${(profile.formacao || "N/A").slice(0, 300)}
 Certificações: ${(profile.certificacoes || []).slice(0, 15).join(", ")}
@@ -562,11 +583,11 @@ export function buildEmail(
   selectedSkills: string[],
   idioma: "pt" | "en"
 ): { assunto_email: string; corpo_email: string } {
-  const defaultCargo = (cvs[0]?.cargo_alvo || "Professional").trim();
-  const cargo = determineCargoApresentar(job, defaultCargo || "Professional");
+  const defaultCargo = (cvs[0]?.cargo_alvo || profile.cargo_alvo || "Professional").trim() || "Professional";
+  const cargo = determineCargoApresentar(job, defaultCargo);
   const isMatias = profile.email === "matiasdomingos158@gmail.com";
   const experience = isMatias
-    ? pickExperience(job, idioma)
+    ? pickExperience(job, idioma, cargo)
     : (profile.bio_longa || "").slice(0, 400);
   const cv = cvs[0];
 
@@ -753,8 +774,9 @@ export async function processCandidateJob(
   }
 
   const idioma = determineLanguage(job);
-  const skillPool = pickRelevantSkillPool(job, profile);
-  const profileWithCargo = { ...profile, cargo_alvo: cvs[0]?.cargo_alvo || "" };
+  const defaultCargo = (cvs[0]?.cargo_alvo || profile.cargo_alvo || "").trim() || "Professional";
+  const skillPool = pickRelevantSkillPool(job, profile, defaultCargo);
+  const profileWithCargo = { ...profile, cargo_alvo: defaultCargo };
 
   let score = 0;
   let selectedSkills: string[] = [];

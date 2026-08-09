@@ -13,6 +13,7 @@ export async function saveProfile(formData: FormData) {
     user_id: user.id,
     email: user.email,
     full_name: String(formData.get("full_name") || ""),
+    cargo_alvo: String(formData.get("cargo_alvo") || ""),
     bio_longa: String(formData.get("bio_longa") || ""),
     formacao: String(formData.get("formacao") || ""),
     certificacoes: JSON.parse(String(formData.get("certificacoes") || "[]")),

@@ -44,6 +44,7 @@ export function AdminPanel({
   const [profileForm, setProfileForm] = useState({
     id: profile?.id || "",
     full_name: profile?.full_name || "",
+    cargo_alvo: profile?.cargo_alvo || "",
     bio_longa: profile?.bio_longa || "",
     formacao: profile?.formacao || "",
     certificacoes: toCSV(profile?.certificacoes),
@@ -153,14 +154,24 @@ export function AdminPanel({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Formação</label>
+              <label className="block text-sm font-medium mb-1">Cargo alvo (usado no assunto do email)</label>
               <input
-                name="formacao"
-                value={profileForm.formacao}
-                onChange={(e) => setProfileForm({ ...profileForm, formacao: e.target.value })}
+                name="cargo_alvo"
+                value={profileForm.cargo_alvo}
+                onChange={(e) => setProfileForm({ ...profileForm, cargo_alvo: e.target.value })}
+                placeholder="ex: HSE Supervisor / Civil Engineer"
                 className="w-full rounded-lg border border-slate-300 px-3 py-2"
               />
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Formação</label>
+            <input
+              name="formacao"
+              value={profileForm.formacao}
+              onChange={(e) => setProfileForm({ ...profileForm, formacao: e.target.value })}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Bio / Percurso completo</label>

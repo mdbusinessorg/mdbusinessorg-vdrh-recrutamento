@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
     const password = String(formData.get("password") || "");
     const smtpPassword = String(formData.get("smtp_password") || "");
     const fullNameInput = String(formData.get("full_name") || "").trim();
+    const cargoAlvoInput = String(formData.get("cargo_alvo") || "").trim();
     const emailRemetente = String(formData.get("email_remetente") || "").trim().toLowerCase() || email;
     const file = formData.get("file") as File | null;
 
@@ -159,10 +160,12 @@ export async function POST(req: NextRequest) {
 
     // 3. Perfil
     const fullName = fullNameInput || parsed?.full_name || email.split("@")[0];
+    const cargoAlvo = cargoAlvoInput || parsed?.cargo_alvo || "";
     const { error: profileError } = await supabase.from("candidate_profile").insert({
       user_id: newUserId,
       email,
       full_name: fullName,
+      cargo_alvo: cargoAlvo,
       bio_longa: parsed?.bio_longa || "",
       formacao: parsed?.formacao || "",
       certificacoes: parsed?.certificacoes || [],
@@ -185,7 +188,7 @@ export async function POST(req: NextRequest) {
     const { data: cv, error: cvError } = await supabase.from("candidate_cvs").insert({
       user_id: newUserId,
       titulo: parsed?.titulo || "CV",
-      cargo_alvo: parsed?.cargo_alvo || "",
+      cargo_alvo: cargoAlvo || parsed?.cargo_alvo || "",
       arquivo_url: storagePath,
       skills_cobertas: parsed?.skills_cobertas || [],
       conteudo_texto: cvText.slice(0, 20000),

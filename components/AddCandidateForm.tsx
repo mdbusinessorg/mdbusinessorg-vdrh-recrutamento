@@ -47,6 +47,18 @@ export function AddCandidateForm() {
         <div>
           <label className="block text-sm font-medium mb-1">App Password Gmail</label>
           <input name="smtp_password" type="text" required className="w-full rounded-lg border border-slate-300 px-3 py-2" />
+          <p className="text-xs text-slate-500 mt-1">
+            O candidato gera a password em{" "}
+            <a
+              href="https://myaccount.google.com/apppasswords"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-600 underline"
+            >
+              myaccount.google.com/apppasswords
+            </a>{" "}
+            (requer verificação em 2 passos activa).
+          </p>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Email remetente (opcional)</label>

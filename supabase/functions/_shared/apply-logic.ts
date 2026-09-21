@@ -399,6 +399,9 @@ const RELEVANT_KEYWORDS = [
   "offshore", "onshore", "oil", "gas", "petróleo", "petroleo", "plataforma", "platform",
   "crane", "lifting", "guindaste", "grua", "industrial", "hse", "qhse", "safety",
   "operator", "operador", "production", "produção", "producao", "field", "subsea",
+  "compressor", "compressores", "pump", "bomba", "bombas", "rotating", "spooling",
+  "diesel", "generator", "gerador", "komatsu", "excavator", "escavadeira",
+  "heavy equipment", "equipamentos pesados", "powertrain", "hydraulic", "hidráulica",
   "instalações", "instalacoes", "instalação", "instalacao", "construção", "construcao",
   "welding", "welder", "soldador", "electricista", "electrica", "eléctrica", "eletricista",
 ];
@@ -473,7 +476,7 @@ const CARGO_SKILL_PATTERNS: Record<string, string[]> = {
   "Banksman & Slinger": ["banksman", "slinger", "lifting", "load control", "crane", "guindaste", "loto", "jsa", "ptw", "risk", "hse", "safety"],
   "Project Management Intern / Technician": ["power bi", "ms project", "project", "pmp", "planning", "reporting", "dashboard", "monitoring"],
   "Well Completion & Electro-Mechanical Maintenance Technician": ["scssv", "fiv", "psv", "packers", "tubing hangers", "xmas tree", "wireline", "hpu", "pneumatic", "hydraulic", "well completion"],
-  "Maintenance Technician / Rigger": ["scssv", "fiv", "psv", "packers", "tubing hangers", "wireline", "pneumatic", "hydraulic", "maintenance", "rigger", "rigging", "crane", "lifting", "mpi", "qaqc", "loto", "jsa", "ptw"],
+  "Maintenance Technician / Rigger": ["scssv", "fiv", "psv", "packers", "tubing hangers", "wireline", "pneumatic", "hydraulic", "maintenance", "rigger", "rigging", "crane", "lifting", "mpi", "qaqc", "loto", "jsa", "ptw", "compressor", "pump", "spooling", "rotating", "komatsu", "powertrain", "diesel", "generator"],
 };
 
 function scoreSkill(job: ExternalJob, skill: string, cargo: string): number {
@@ -513,15 +516,15 @@ function pickRelevantSkillPool(job: ExternalJob, profile: CandidateProfile, defa
 
 const EXPERIENCE_SENTENCES: Record<string, Record<string, string>> = {
   pt: {
-    A: "Como Well Completion and Electro-Mechanical Maintenance Technician, apoiei projectos offshore de well completion na SLB, incluindo montagem, inspeção e manutenção de SCSSV, FIV, PSV, packers, tubing hangers, wireline tools e equipamentos de lifting/rigging, calibrados conforme especificações OEM/SLB.",
-    B: "Na Cimertex, executei manutenção preventiva e corretiva de equipamentos pesados e geradores industriais, incluindo sistemas hidráulicos, bombas, motores e sistemas de arrefecimento, com suporte às operações de mineração em Catoca e Kaxepa.",
+    A: "Como Well Completion and Electro-Mechanical Maintenance Technician na SLB, apoiei projectos offshore de well completion, incluindo montagem, inspeção e manutenção de SCSSV, FIV, PSV, packers, tubing hangers e wireline tools, além de reparação de rotating equipment — bombas, compressores e spooling units — calibrados conforme especificações OEM/SLB.",
+    B: "Na Cimertex, na mina de Kaxepa, executo de forma autónoma manutenção preventiva e corretiva de equipamentos pesados Komatsu (escavadeiras PC, basculantes HM) e bulldozers, com diagnóstico de falhas hidráulicas, de powertrain e electrónicas via KOMTRAX, além de sistemas de motores diesel, arrefecimento e geradores industriais.",
     C: "Como Project Management Intern na Ekton Project Analytics atribuído à Chevron no Bloco Mafumeira, apoiei o planeamento, monitorização e controlo de projecto, dashboards em Power BI e reporting em MS Project.",
     D: "Certificado como Banksman & Slinger pela SLB, realizei planos de lifting, controlo de cargas e supervisão de segurança de guindastes, integrando as práticas de LOTO/PTW/JSA com registo zero de acidentes.",
     E: "Formado pelo Instituto Nacional de Petróleos (INP) em Electromecânica / Oil & Gas com Distinção (16/20), tenho base sólida em equipamentos e sistemas offshore.",
   },
   en: {
-    A: "As a Well Completion and Electro-Mechanical Maintenance Technician, I supported offshore well completion projects at SLB, including assembly, inspection and maintenance of SCSSV, FIV, PSV, packers, tubing hangers, wireline tools and lifting/rigging equipment, calibrated to OEM/SLB specs.",
-    B: "At Cimertex, I carried out preventive and corrective maintenance on heavy equipment and industrial generators, including hydraulic systems, pumps, engines and cooling systems, supporting mining operations at Catoca and Kaxepa.",
+    A: "As a Well Completion and Electro-Mechanical Maintenance Technician at SLB, I supported offshore well completion projects, including assembly, inspection and maintenance of SCSSV, FIV, PSV, packers, tubing hangers and wireline tools, plus repair of rotating equipment — pumps, compressors and spooling units — calibrated to OEM/SLB specs.",
+    B: "At Cimertex, Kaxepa mine, I independently perform preventive and corrective maintenance on Komatsu heavy equipment (PC excavators, HM dump trucks) and bulldozers, diagnosing hydraulic, powertrain and electronic faults using KOMTRAX, plus diesel engines, cooling systems and industrial generators.",
     C: "As a Project Management Intern at Ekton Project Analytics assigned to Chevron’s Block Mafumeira, I supported project planning, monitoring and control, Power BI dashboards and MS Project reporting.",
     D: "Certified as Banksman & Slinger by SLB, I prepared lifting plans, load control and crane safety oversight, integrating LOTO/PTW/JSA practices with a zero-accident record.",
     E: "I hold a Technical Diploma in Electromechanics / Oil & Gas from the Instituto Nacional de Petróleos (INP) with Distinction (16/20), giving me a solid foundation in offshore equipment and systems.",
